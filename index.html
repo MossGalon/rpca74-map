@@ -162,7 +162,7 @@
 
         // 1. Initialize Map
         function initMap() {
-            console.log('Google Maps API: Loaded');
+            console.log('--- Google Maps Initialize ---');
             const mapContainer = document.getElementById('map');
             
             map = new google.maps.Map(mapContainer, {
@@ -184,17 +184,18 @@
                     this.isMe = isMe;
                 }
                 onAdd() {
+                    console.log(`[Marker] onAdd: ${this.data.nickname}`);
                     const div = document.createElement('div');
                     div.style.position = 'absolute';
                     div.style.cursor = 'pointer';
-                    div.style.zIndex = this.isMe ? "200" : "100";
+                    div.style.zIndex = this.isMe ? "1000" : "500";
                     
                     const color = this.isMe ? '#22c55e' : '#DC143C';
                     const timeAgo = getTimeAgo(this.data.checkinTime);
                     const caption = this.data.caption || '';
                     
                     div.innerHTML = `
-                        <div style="background:#fff; border:3px solid ${color}; border-radius:12px; padding:6px; min-width:80px; max-width:110px; box-shadow:0 4px 10px rgba(0,0,0,0.5); position:relative;">
+                        <div style="background:#fff; border:3px solid ${color}; border-radius:12px; padding:6px; min-width:85px; box-shadow:0 4px 12px rgba(0,0,0,0.5); position:relative;">
                             <img src="${this.data.pictureUrl}" style="width:50px; height:50px; border-radius:8px; display:block; margin:0 auto; object-fit:cover;" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(this.data.nickname)}&background=DC143C&color=fff'">
                             <div style="font-size:11px; color:#333; font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center; margin-top:4px;">${this.isMe ? '⭐ ' : ''}${this.data.nickname}</div>
                             <div style="font-size:9px; color:${color}; font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center;">📍 ${this.data.placeName}</div>
@@ -205,9 +206,10 @@
                     `;
                     div.onclick = () => showInfo(this.data, this.pos);
                     this.div = div;
+                    
+                    // ใช้ overlayLayer แทน overlayMouseTarget ในบางกรณีเพื่อความเสถียร
                     const panes = this.getPanes();
                     panes.overlayMouseTarget.appendChild(div);
-                    console.log(`Marker Added: ${this.data.nickname}`);
                 }
                 draw() {
                     const overlayProjection = this.getProjection();
@@ -279,9 +281,18 @@
             try {
                 const res = await fetch(CONFIG.GAS_URL + '?action=getCheckins');
                 const data = await res.json();
-                console.log('Data: Received', data);
                 
+                console.log('Data: Received Result', data.success);
                 if (data.success) {
+                    console.log(`Data: Found ${data.checkins.length} checkins`);
+                    console.table(data.checkins); // ดูพิกัดชัดๆ ใน Console
+                    
+                    if (data.checkins.length === 0) {
+                        showToast('ℹ️ ไม่พบหมุดที่ยังไม่หมดอายุ');
+                    } else {
+                        showToast(`📍 พบข้อมูลเพื่อน ${data.checkins.length} คน`);
+                    }
+
                     renderMarkers(data.checkins);
                     document.getElementById('activeCount').textContent = data.checkins.length + ' คน';
                     
@@ -292,7 +303,7 @@
                         const checkinBtn = document.getElementById('checkinBtn');
                         
                         if (myPoint) {
-                            statusEl.textContent = '📍 ' + myPoint.placeName + ' (' + getTimeAgo(myPoint.checkinTime) + ')';
+                            statusEl.textContent = '📍 ' + myPoint.placeName;
                             statusEl.className = 'status active';
                             cancelBtn.style.display = 'block';
                             checkinBtn.textContent = '📍 เปลี่ยนที่';
@@ -303,33 +314,37 @@
                             checkinBtn.textContent = '📍 แชร์โล';
                         }
                     }
+                } else {
+                    console.error('GAS Error:', data.error);
+                    showToast('Error: ' + data.error);
                 }
             } catch (err) {
                 console.error('Fetch error:', err);
-                showToast('โหลดข้อมูลไม่สำเร็จ');
+                showToast('เชื่อมต่อฐานข้อมูลล้มเหลว');
             }
         }
 
         function renderMarkers(checkins) {
-            console.log(`Render: Clearing ${markers.length} markers`);
+            console.log(`Render: Start rendering ${checkins.length} markers`);
+            
+            // ลบหมุดเก่า
             markers.forEach(m => m.setMap(null));
             markers = [];
             
             if (!ProfileMarkerClass) {
-                console.error('Error: ProfileMarkerClass is not defined');
+                console.error('Render Error: ProfileMarkerClass is not ready');
                 return;
             }
 
             const bounds = new google.maps.LatLngBounds();
-            console.log(`Render: Creating ${checkins.length} new markers`);
+            let validCount = 0;
 
-            checkins.forEach((c, index) => {
-                // บังคับให้เป็น Number เพื่อความชัวร์
-                const lat = Number(c.lat);
-                const lng = Number(c.lng);
+            checkins.forEach((c) => {
+                const lat = parseFloat(c.lat);
+                const lng = parseFloat(c.lng);
                 
                 if (isNaN(lat) || isNaN(lng)) {
-                    console.warn(`Skip: Invalid coordinates for ${c.nickname}`, c);
+                    console.warn(`Render Skip: Invalid coords for ${c.nickname}`);
                     return;
                 }
 
@@ -340,14 +355,17 @@
                 marker.setMap(map);
                 markers.push(marker);
                 bounds.extend(pos);
+                validCount++;
             });
 
-            if (checkins.length > 0) {
+            console.log(`Render: Success, ${validCount} markers set to map`);
+
+            if (validCount > 0) {
                 map.fitBounds(bounds);
-                // ถ้ามีคนเดียว อย่าซูมใกล้เกินไป
-                if (checkins.length === 1) {
+                // ป้องกันการซูมใกล้เกินไปในกรณีมีหมุดเดียว
+                if (validCount === 1) {
                     const listener = google.maps.event.addListener(map, 'idle', () => {
-                        map.setZoom(15);
+                        if (map.getZoom() > 15) map.setZoom(15);
                         google.maps.event.removeListener(listener);
                     });
                 }
@@ -368,9 +386,9 @@
                     document.getElementById('gpsText').textContent = '✅ พบตำแหน่งแล้ว';
                 },
                 e => {
-                    console.error('Geolocation Error:', e);
+                    console.error('GPS Error:', e);
                     document.getElementById('gpsStatus').className = 'gps-status error';
-                    document.getElementById('gpsText').textContent = '❌ โปรดอนุญาต GPS ในการตั้งค่า';
+                    document.getElementById('gpsText').textContent = '❌ กรุณาอนุญาตการเข้าถึงตำแหน่ง';
                 },
                 { enableHighAccuracy: true, timeout: 10000 }
             );
@@ -408,14 +426,13 @@
                     document.getElementById('placeName').value = '';
                     document.getElementById('caption').value = '';
                     await refreshData();
-                    // เลื่อนแผนที่ไปที่ตำแหน่งตัวเอง
                     map.panTo({ lat: currentLat, lng: currentLng });
                 } else {
                     showToast('บันทึกไม่สำเร็จ: ' + data.error);
                 }
             } catch (err) { 
                 console.error('Submit error:', err);
-                showToast('เกิดข้อผิดพลาดในการเชื่อมต่อ'); 
+                showToast('เกิดข้อผิดพลาดในการส่งข้อมูล'); 
             }
             showLoading(false);
         }
