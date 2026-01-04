@@ -86,14 +86,14 @@
 <body>
     <header class="header">
         <div class="header-top">
-            <h1>📍 Map รวมพล</h1>
+            <h1>📍 Map รวมพล รุ่น 74</h1>
             <span class="count" id="activeCount">0 คน</span>
         </div>
         <div class="profile-bar" id="profileBar" style="display:none;">
             <img id="profilePic" src="" alt="Profile">
             <div class="info">
                 <div class="name" id="profileName">-</div>
-                <div class="status" id="profileStatus">กำลังโหลด...</div>
+                <div class="status" id="profileStatus">กำลังโหลดข้อมูล...</div>
             </div>
             <button class="cancel-btn" id="cancelBtn" style="display:none;" onclick="cancelCheckin()">❌ ยกเลิก</button>
         </div>
@@ -126,12 +126,15 @@
                     <textarea id="caption" placeholder="เช่น กินเหล้าอยู่ มาได้เลย"></textarea>
                     <small>⏰ หมุดจะหายอัตโนมัติใน 24 ชั่วโมง</small>
                 </div>
-                <button type="submit" class="btn btn-primary" style="width:100%">✅ แชร์โล</button>
+                <button type="submit" class="btn btn-primary" style="width:100%">✅ ตกลงแชร์โล</button>
             </form>
         </div>
     </div>
 
-    <div class="loading-overlay active" id="loadingOverlay"><div class="spinner"></div><span style="margin-top:10px">กำลังเตรียมแผนที่...</span></div>
+    <div class="loading-overlay active" id="loadingOverlay">
+        <div class="spinner"></div>
+        <span style="margin-top:10px" id="loadingText">กำลังเตรียมแผนที่...</span>
+    </div>
     <div class="toast" id="toast"></div>
 
     <script>
@@ -144,6 +147,7 @@
         let ProfileMarkerClass = null;
 
         function getTimeAgo(timestamp) {
+            if (!timestamp) return 'เมื่อสักครู่';
             const now = new Date();
             const then = new Date(timestamp);
             const diffMs = now - then;
@@ -156,8 +160,9 @@
             return Math.floor(diffHours / 24) + ' วันที่แล้ว';
         }
 
+        // 1. Initialize Map
         function initMap() {
-            console.log('Google Maps loaded!');
+            console.log('Google Maps API: Loaded');
             const mapContainer = document.getElementById('map');
             
             map = new google.maps.Map(mapContainer, {
@@ -170,6 +175,7 @@
                 styles: [{ featureType: "poi.business", stylers: [{ visibility: "off" }] }]
             });
 
+            // สร้าง Class สำหรับ Custom Marker
             ProfileMarkerClass = class extends google.maps.OverlayView {
                 constructor(pos, data, isMe) {
                     super();
@@ -181,12 +187,14 @@
                     const div = document.createElement('div');
                     div.style.position = 'absolute';
                     div.style.cursor = 'pointer';
+                    div.style.zIndex = this.isMe ? "200" : "100";
+                    
                     const color = this.isMe ? '#22c55e' : '#DC143C';
                     const timeAgo = getTimeAgo(this.data.checkinTime);
                     const caption = this.data.caption || '';
                     
                     div.innerHTML = `
-                        <div style="background:#fff; border:3px solid ${color}; border-radius:12px; padding:6px; min-width:70px; max-width:100px; box-shadow:0 2px 8px rgba(0,0,0,0.4); position:relative;">
+                        <div style="background:#fff; border:3px solid ${color}; border-radius:12px; padding:6px; min-width:80px; max-width:110px; box-shadow:0 4px 10px rgba(0,0,0,0.5); position:relative;">
                             <img src="${this.data.pictureUrl}" style="width:50px; height:50px; border-radius:8px; display:block; margin:0 auto; object-fit:cover;" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(this.data.nickname)}&background=DC143C&color=fff'">
                             <div style="font-size:11px; color:#333; font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center; margin-top:4px;">${this.isMe ? '⭐ ' : ''}${this.data.nickname}</div>
                             <div style="font-size:9px; color:${color}; font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center;">📍 ${this.data.placeName}</div>
@@ -197,17 +205,26 @@
                     `;
                     div.onclick = () => showInfo(this.data, this.pos);
                     this.div = div;
-                    this.getPanes().overlayMouseTarget.appendChild(div);
+                    const panes = this.getPanes();
+                    panes.overlayMouseTarget.appendChild(div);
+                    console.log(`Marker Added: ${this.data.nickname}`);
                 }
                 draw() {
                     const overlayProjection = this.getProjection();
+                    if (!overlayProjection) return;
+                    
                     const point = overlayProjection.fromLatLngToDivPixel(this.pos);
-                    if (this.div) {
-                        this.div.style.left = (point.x - 40) + 'px';
+                    if (this.div && point) {
+                        this.div.style.left = (point.x - 45) + 'px';
                         this.div.style.top = (point.y - 120) + 'px';
                     }
                 }
-                onRemove() { if (this.div) this.div.parentNode.removeChild(this.div); }
+                onRemove() {
+                    if (this.div) {
+                        this.div.parentNode.removeChild(this.div);
+                        this.div = null;
+                    }
+                }
             };
 
             initLIFF();
@@ -233,30 +250,37 @@
             iw.open(map);
         }
 
+        // 2. LIFF Logic
         async function initLIFF() {
             try {
+                console.log('LIFF: Initializing...');
                 await liff.init({ liffId: CONFIG.LIFF_ID });
                 if (!liff.isLoggedIn()) {
                     liff.login();
                     return;
                 }
                 userProfile = await liff.getProfile();
+                console.log('LIFF: Profile loaded', userProfile.displayName);
+                
                 document.getElementById('profileBar').style.display = 'flex';
                 document.getElementById('profilePic').src = userProfile.pictureUrl;
                 document.getElementById('profileName').textContent = userProfile.displayName;
                 
                 await refreshData();
             } catch (err) {
-                console.error('LIFF Error', err);
+                console.error('LIFF Error:', err);
                 showToast('LIFF Error: ' + err.message);
             }
             showLoading(false);
         }
 
         async function refreshData() {
+            console.log('Data: Fetching from GAS...');
             try {
                 const res = await fetch(CONFIG.GAS_URL + '?action=getCheckins');
                 const data = await res.json();
+                console.log('Data: Received', data);
+                
                 if (data.success) {
                     renderMarkers(data.checkins);
                     document.getElementById('activeCount').textContent = data.checkins.length + ' คน';
@@ -268,11 +292,7 @@
                         const checkinBtn = document.getElementById('checkinBtn');
                         
                         if (myPoint) {
-                            const timeAgo = getTimeAgo(myPoint.checkinTime);
-                            let statusText = '📍 ' + myPoint.placeName;
-                            if (myPoint.caption) statusText += ' - "' + myPoint.caption + '"';
-                            statusText += ' (' + timeAgo + ')';
-                            statusEl.textContent = statusText;
+                            statusEl.textContent = '📍 ' + myPoint.placeName + ' (' + getTimeAgo(myPoint.checkinTime) + ')';
                             statusEl.className = 'status active';
                             cancelBtn.style.display = 'block';
                             checkinBtn.textContent = '📍 เปลี่ยนที่';
@@ -291,13 +311,31 @@
         }
 
         function renderMarkers(checkins) {
+            console.log(`Render: Clearing ${markers.length} markers`);
             markers.forEach(m => m.setMap(null));
             markers = [];
-            const bounds = new google.maps.LatLngBounds();
+            
+            if (!ProfileMarkerClass) {
+                console.error('Error: ProfileMarkerClass is not defined');
+                return;
+            }
 
-            checkins.forEach(c => {
-                const pos = new google.maps.LatLng(c.lat, c.lng);
+            const bounds = new google.maps.LatLngBounds();
+            console.log(`Render: Creating ${checkins.length} new markers`);
+
+            checkins.forEach((c, index) => {
+                // บังคับให้เป็น Number เพื่อความชัวร์
+                const lat = Number(c.lat);
+                const lng = Number(c.lng);
+                
+                if (isNaN(lat) || isNaN(lng)) {
+                    console.warn(`Skip: Invalid coordinates for ${c.nickname}`, c);
+                    return;
+                }
+
+                const pos = new google.maps.LatLng(lat, lng);
                 const isMe = userProfile && c.userId === userProfile.userId;
+                
                 const marker = new ProfileMarkerClass(pos, c, isMe);
                 marker.setMap(map);
                 markers.push(marker);
@@ -306,10 +344,17 @@
 
             if (checkins.length > 0) {
                 map.fitBounds(bounds);
-                if (checkins.length === 1) map.setZoom(15);
+                // ถ้ามีคนเดียว อย่าซูมใกล้เกินไป
+                if (checkins.length === 1) {
+                    const listener = google.maps.event.addListener(map, 'idle', () => {
+                        map.setZoom(15);
+                        google.maps.event.removeListener(listener);
+                    });
+                }
             }
         }
 
+        // 3. UI Interactions
         function openCheckinModal() {
             document.getElementById('checkinModal').classList.add('active');
             document.getElementById('gpsStatus').className = 'gps-status';
@@ -323,10 +368,11 @@
                     document.getElementById('gpsText').textContent = '✅ พบตำแหน่งแล้ว';
                 },
                 e => {
+                    console.error('Geolocation Error:', e);
                     document.getElementById('gpsStatus').className = 'gps-status error';
-                    document.getElementById('gpsText').textContent = '❌ โปรดอนุญาต GPS';
+                    document.getElementById('gpsText').textContent = '❌ โปรดอนุญาต GPS ในการตั้งค่า';
                 },
-                { enableHighAccuracy: true }
+                { enableHighAccuracy: true, timeout: 10000 }
             );
         }
 
@@ -336,9 +382,9 @@
 
         async function submitCheckin(e) {
             e.preventDefault();
-            if (!currentLat) return showToast('กรุณารอ GPS สักครู่');
+            if (!currentLat || !currentLng) return showToast('กรุณารอ GPS ล็อคตำแหน่ง');
             
-            showLoading(true);
+            showLoading(true, "กำลังบันทึกข้อมูล...");
             try {
                 const res = await fetch(CONFIG.GAS_URL, {
                     method: 'POST',
@@ -362,32 +408,40 @@
                     document.getElementById('placeName').value = '';
                     document.getElementById('caption').value = '';
                     await refreshData();
+                    // เลื่อนแผนที่ไปที่ตำแหน่งตัวเอง
+                    map.panTo({ lat: currentLat, lng: currentLng });
+                } else {
+                    showToast('บันทึกไม่สำเร็จ: ' + data.error);
                 }
             } catch (err) { 
                 console.error('Submit error:', err);
-                showToast('เกิดข้อผิดพลาด'); 
+                showToast('เกิดข้อผิดพลาดในการเชื่อมต่อ'); 
             }
             showLoading(false);
         }
 
         async function cancelCheckin() {
             if (!confirm('ต้องการลบหมุดของคุณใช่หรือไม่?')) return;
-            showLoading(true);
+            showLoading(true, "กำลังลบหมุด...");
             try {
-                await fetch(CONFIG.GAS_URL, {
+                const res = await fetch(CONFIG.GAS_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: new URLSearchParams({ action: 'deleteCheckin', userId: userProfile.userId })
                 });
-                await refreshData();
-                showToast('✅ ลบหมุดแล้ว');
+                const data = await res.json();
+                if (data.success) {
+                    await refreshData();
+                    showToast('✅ ลบหมุดแล้ว');
+                }
             } catch (err) { 
                 showToast('ยกเลิกไม่สำเร็จ'); 
             }
             showLoading(false);
         }
 
-        function showLoading(s) { 
+        function showLoading(s, text = "กำลังโหลด...") { 
+            document.getElementById('loadingText').textContent = text;
             document.getElementById('loadingOverlay').classList.toggle('active', s); 
         }
         
@@ -399,6 +453,7 @@
         }
     </script>
 
+    <!-- Google Maps API -->
     <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDTS-AxrXpfxj7-14GjX0Asi3QhdYxg7ao&loading=async&callback=initMap"></script>
 </body>
 </html>
