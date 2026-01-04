@@ -317,6 +317,8 @@
           body: new URLSearchParams({
             action: 'addCheckin',
             userId: userProfile.userId,
+            nickname: userProfile.displayName,  // ส่งชื่อจาก LINE
+            unit: 'รุ่น 74',                     // ใช้ default
             lat: currentLat,
             lng: currentLng,
             placeName: placeName,
