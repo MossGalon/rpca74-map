@@ -160,7 +160,6 @@
             return Math.floor(diffHours / 24) + ' วันที่แล้ว';
         }
 
-        // 1. Initialize Map
         function initMap() {
             console.log('--- Google Maps Initialize ---');
             const mapContainer = document.getElementById('map');
@@ -175,7 +174,6 @@
                 styles: [{ featureType: "poi.business", stylers: [{ visibility: "off" }] }]
             });
 
-            // สร้าง Class สำหรับ Custom Marker
             ProfileMarkerClass = class extends google.maps.OverlayView {
                 constructor(pos, data, isMe) {
                     super();
@@ -184,7 +182,7 @@
                     this.isMe = isMe;
                 }
                 onAdd() {
-                    console.log(`[Marker] onAdd: ${this.data.nickname}`);
+                    console.log(`[Marker] Adding to map: ${this.data.nickname}`);
                     const div = document.createElement('div');
                     div.style.position = 'absolute';
                     div.style.cursor = 'pointer';
@@ -206,15 +204,12 @@
                     `;
                     div.onclick = () => showInfo(this.data, this.pos);
                     this.div = div;
-                    
-                    // ใช้ overlayLayer แทน overlayMouseTarget ในบางกรณีเพื่อความเสถียร
                     const panes = this.getPanes();
                     panes.overlayMouseTarget.appendChild(div);
                 }
                 draw() {
                     const overlayProjection = this.getProjection();
                     if (!overlayProjection) return;
-                    
                     const point = overlayProjection.fromLatLngToDivPixel(this.pos);
                     if (this.div && point) {
                         this.div.style.left = (point.x - 45) + 'px';
@@ -228,7 +223,6 @@
                     }
                 }
             };
-
             initLIFF();
         }
 
@@ -252,22 +246,17 @@
             iw.open(map);
         }
 
-        // 2. LIFF Logic
         async function initLIFF() {
             try {
-                console.log('LIFF: Initializing...');
                 await liff.init({ liffId: CONFIG.LIFF_ID });
                 if (!liff.isLoggedIn()) {
                     liff.login();
                     return;
                 }
                 userProfile = await liff.getProfile();
-                console.log('LIFF: Profile loaded', userProfile.displayName);
-                
                 document.getElementById('profileBar').style.display = 'flex';
                 document.getElementById('profilePic').src = userProfile.pictureUrl;
                 document.getElementById('profileName').textContent = userProfile.displayName;
-                
                 await refreshData();
             } catch (err) {
                 console.error('LIFF Error:', err);
@@ -277,20 +266,20 @@
         }
 
         async function refreshData() {
-            console.log('Data: Fetching from GAS...');
             try {
                 const res = await fetch(CONFIG.GAS_URL + '?action=getCheckins');
                 const data = await res.json();
                 
-                console.log('Data: Received Result', data.success);
                 if (data.success) {
-                    console.log(`Data: Found ${data.checkins.length} checkins`);
-                    console.table(data.checkins); // ดูพิกัดชัดๆ ใน Console
+                    console.log(`[Data] Found ${data.checkins.length} checkins`);
+                    console.log(`[Debug] Server Time: ${data.serverTime}`);
                     
-                    if (data.checkins.length === 0) {
-                        showToast('ℹ️ ไม่พบหมุดที่ยังไม่หมดอายุ');
-                    } else {
-                        showToast(`📍 พบข้อมูลเพื่อน ${data.checkins.length} คน`);
+                    // ตรวจสอบ Timezone: หากเวลา Server ต่างจากเวลาเครื่องเกิน 1 นาที อาจมีปัญหาหมุดหาย
+                    const serverTime = new Date(data.serverTime);
+                    const localTime = new Date();
+                    const diffMins = Math.abs(serverTime - localTime) / 60000;
+                    if (diffMins > 5) {
+                        console.warn('⚠️ Timezone Mismatch: เวลาที่ Server กับเครื่องคุณต่างกันเกิน 5 นาที อาจทำให้หมุดหาย');
                     }
 
                     renderMarkers(data.checkins);
@@ -314,39 +303,28 @@
                             checkinBtn.textContent = '📍 แชร์โล';
                         }
                     }
-                } else {
-                    console.error('GAS Error:', data.error);
-                    showToast('Error: ' + data.error);
+                    if (data.checkins.length > 0) showToast(`📍 พบหมุดเพื่อน ${data.checkins.length} คน`);
                 }
             } catch (err) {
                 console.error('Fetch error:', err);
-                showToast('เชื่อมต่อฐานข้อมูลล้มเหลว');
+                showToast('โหลดข้อมูลไม่สำเร็จ');
             }
         }
 
         function renderMarkers(checkins) {
-            console.log(`Render: Start rendering ${checkins.length} markers`);
-            
-            // ลบหมุดเก่า
             markers.forEach(m => m.setMap(null));
             markers = [];
             
-            if (!ProfileMarkerClass) {
-                console.error('Render Error: ProfileMarkerClass is not ready');
-                return;
-            }
+            if (!ProfileMarkerClass) return;
 
             const bounds = new google.maps.LatLngBounds();
-            let validCount = 0;
+            let hasMarkers = false;
 
             checkins.forEach((c) => {
-                const lat = parseFloat(c.lat);
-                const lng = parseFloat(c.lng);
+                const lat = Number(c.lat);
+                const lng = Number(c.lng);
                 
-                if (isNaN(lat) || isNaN(lng)) {
-                    console.warn(`Render Skip: Invalid coords for ${c.nickname}`);
-                    return;
-                }
+                if (isNaN(lat) || isNaN(lng) || lat === 0) return;
 
                 const pos = new google.maps.LatLng(lat, lng);
                 const isMe = userProfile && c.userId === userProfile.userId;
@@ -355,15 +333,12 @@
                 marker.setMap(map);
                 markers.push(marker);
                 bounds.extend(pos);
-                validCount++;
+                hasMarkers = true;
             });
 
-            console.log(`Render: Success, ${validCount} markers set to map`);
-
-            if (validCount > 0) {
+            if (hasMarkers) {
                 map.fitBounds(bounds);
-                // ป้องกันการซูมใกล้เกินไปในกรณีมีหมุดเดียว
-                if (validCount === 1) {
+                if (checkins.length === 1) {
                     const listener = google.maps.event.addListener(map, 'idle', () => {
                         if (map.getZoom() > 15) map.setZoom(15);
                         google.maps.event.removeListener(listener);
@@ -372,7 +347,6 @@
             }
         }
 
-        // 3. UI Interactions
         function openCheckinModal() {
             document.getElementById('checkinModal').classList.add('active');
             document.getElementById('gpsStatus').className = 'gps-status';
@@ -386,9 +360,8 @@
                     document.getElementById('gpsText').textContent = '✅ พบตำแหน่งแล้ว';
                 },
                 e => {
-                    console.error('GPS Error:', e);
                     document.getElementById('gpsStatus').className = 'gps-status error';
-                    document.getElementById('gpsText').textContent = '❌ กรุณาอนุญาตการเข้าถึงตำแหน่ง';
+                    document.getElementById('gpsText').textContent = '❌ โปรดอนุญาต GPS';
                 },
                 { enableHighAccuracy: true, timeout: 10000 }
             );
@@ -402,7 +375,7 @@
             e.preventDefault();
             if (!currentLat || !currentLng) return showToast('กรุณารอ GPS ล็อคตำแหน่ง');
             
-            showLoading(true, "กำลังบันทึกข้อมูล...");
+            showLoading(true, "กำลังบันทึก...");
             try {
                 const res = await fetch(CONFIG.GAS_URL, {
                     method: 'POST',
@@ -423,23 +396,18 @@
                 if (data.success) {
                     showToast('✅ แชร์โลสำเร็จ!');
                     closeCheckinModal();
-                    document.getElementById('placeName').value = '';
-                    document.getElementById('caption').value = '';
                     await refreshData();
                     map.panTo({ lat: currentLat, lng: currentLng });
-                } else {
-                    showToast('บันทึกไม่สำเร็จ: ' + data.error);
                 }
             } catch (err) { 
-                console.error('Submit error:', err);
-                showToast('เกิดข้อผิดพลาดในการส่งข้อมูล'); 
+                showToast('เกิดข้อผิดพลาด'); 
             }
             showLoading(false);
         }
 
         async function cancelCheckin() {
-            if (!confirm('ต้องการลบหมุดของคุณใช่หรือไม่?')) return;
-            showLoading(true, "กำลังลบหมุด...");
+            if (!confirm('ต้องการลบหมุดใช่หรือไม่?')) return;
+            showLoading(true, "กำลังลบ...");
             try {
                 const res = await fetch(CONFIG.GAS_URL, {
                     method: 'POST',
@@ -452,7 +420,7 @@
                     showToast('✅ ลบหมุดแล้ว');
                 }
             } catch (err) { 
-                showToast('ยกเลิกไม่สำเร็จ'); 
+                showToast('ลบไม่สำเร็จ'); 
             }
             showLoading(false);
         }
@@ -469,8 +437,6 @@
             setTimeout(() => t.classList.remove('show'), 3000);
         }
     </script>
-
-    <!-- Google Maps API -->
     <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDTS-AxrXpfxj7-14GjX0Asi3QhdYxg7ao&loading=async&callback=initMap"></script>
 </body>
 </html>
