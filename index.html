@@ -4,19 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>📍 Map รวมพล รุ่น 74</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1a1a2e;color:#fff;min-height:100vh}
     
-    /* Header with Profile */
     .header{background:linear-gradient(135deg,#8B0000,#DC143C);padding:10px 16px;position:fixed;top:0;left:0;right:0;z-index:1000;box-shadow:0 2px 10px rgba(0,0,0,0.3)}
     .header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
     .header h1{font-size:18px;display:flex;align-items:center;gap:8px}
     .header .count{background:rgba(255,255,255,0.2);padding:4px 10px;border-radius:20px;font-size:13px}
     
-    /* Profile Bar */
     .profile-bar{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,0.2);padding:8px 12px;border-radius:12px}
     .profile-bar img{width:36px;height:36px;border-radius:50%;border:2px solid #fff}
     .profile-bar .info{flex:1}
@@ -25,7 +22,6 @@
     .profile-bar .status.active{color:#4ade80}
     .profile-bar .status.inactive{color:#fbbf24}
     .profile-bar .cancel-btn{background:rgba(255,255,255,0.2);border:none;color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer}
-    .profile-bar .cancel-btn:active{background:rgba(255,255,255,0.3)}
     
     #map{position:fixed;top:110px;bottom:70px;left:0;right:0;z-index:1}
     
@@ -35,7 +31,6 @@
     .btn-primary{background:linear-gradient(135deg,#DC143C,#8B0000);color:#fff}
     .btn-secondary{background:#333;color:#fff}
     .btn-danger{background:#ef4444;color:#fff}
-    .btn:disabled{opacity:0.5;cursor:not-allowed}
     
     .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:2000;align-items:flex-end;justify-content:center}
     .modal-overlay.active{display:flex}
@@ -61,14 +56,6 @@
     .gps-status.loading{border:1px solid #f59e0b}
     .gps-status.error{border:1px solid #ef4444}
     
-    .popup-content{min-width:200px}
-    .popup-content h3{font-size:16px;margin-bottom:4px;color:#1a1a2e}
-    .popup-content .unit{font-size:12px;color:#666;margin-bottom:8px}
-    .popup-content .place{font-size:14px;font-weight:600;color:#DC143C;margin-bottom:4px}
-    .popup-content .caption{font-size:13px;color:#333;font-style:italic;margin-bottom:8px}
-    .popup-content .time{font-size:11px;color:#999}
-    .popup-content .nav-btn{display:block;width:100%;margin-top:10px;padding:8px;background:#DC143C;color:#fff;text-align:center;text-decoration:none;border-radius:8px;font-size:13px}
-    
     .loading-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:3000;align-items:center;justify-content:center;flex-direction:column;gap:16px}
     .loading-overlay.active{display:flex}
     .spinner{width:50px;height:50px;border:4px solid #333;border-top-color:#DC143C;border-radius:50%;animation:spin 1s linear infinite}
@@ -79,14 +66,69 @@
     .toast.success{background:#22c55e}
     .toast.error{background:#ef4444}
     
-    /* My Checkin Info */
     .my-checkin-info{background:#0d0d1a;padding:12px;border-radius:12px;margin-bottom:16px;border:1px solid #22c55e}
     .my-checkin-info .place{font-weight:600;color:#22c55e;margin-bottom:4px}
     .my-checkin-info .time{font-size:12px;color:#aaa}
+    
+    /* Custom Marker Label Styles */
+    .marker-label{
+      background:#fff;
+      border-radius:12px;
+      padding:8px;
+      box-shadow:0 2px 10px rgba(0,0,0,0.3);
+      text-align:center;
+      min-width:80px;
+      border:2px solid #DC143C;
+    }
+    .marker-label.my-marker{
+      border-color:#22c55e;
+    }
+    .marker-label img{
+      width:40px;
+      height:40px;
+      border-radius:50%;
+      margin-bottom:4px;
+      border:2px solid #DC143C;
+    }
+    .marker-label.my-marker img{
+      border-color:#22c55e;
+    }
+    .marker-label .name{
+      font-size:11px;
+      font-weight:bold;
+      color:#333;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width:70px;
+    }
+    .marker-label .place{
+      font-size:10px;
+      color:#DC143C;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width:70px;
+    }
+    .marker-label.my-marker .place{
+      color:#22c55e;
+    }
+    .marker-label::after{
+      content:'';
+      position:absolute;
+      bottom:-10px;
+      left:50%;
+      transform:translateX(-50%);
+      border-left:10px solid transparent;
+      border-right:10px solid transparent;
+      border-top:10px solid #DC143C;
+    }
+    .marker-label.my-marker::after{
+      border-top-color:#22c55e;
+    }
   </style>
 </head>
 <body>
-  <!-- Header with Profile -->
   <header class="header">
     <div class="header-top">
       <h1>📍 Map รวมพล</h1>
@@ -98,19 +140,17 @@
         <div class="name" id="profileName">-</div>
         <div class="status" id="profileStatus">กำลังโหลด...</div>
       </div>
-      <button class="cancel-btn" id="cancelBtn" style="display:none;" onclick="cancelCheckin()">❌ ยกเลิกหมุด</button>
+      <button class="cancel-btn" id="cancelBtn" style="display:none;" onclick="cancelCheckin()">❌ ยกเลิก</button>
     </div>
   </header>
   
   <div id="map"></div>
   
-  <!-- Bottom Actions -->
   <div class="bottom-actions">
     <button class="btn btn-secondary" onclick="refreshMap()">🔄 รีเฟรช</button>
     <button class="btn btn-primary" id="checkinBtn" onclick="openCheckinModal()">📍 แชร์โลของฉัน</button>
   </div>
   
-  <!-- Check-in Modal -->
   <div class="modal-overlay" id="checkinModal">
     <div class="modal">
       <div class="modal-header">
@@ -118,7 +158,6 @@
         <button class="modal-close" onclick="closeCheckinModal()">✕</button>
       </div>
       
-      <!-- My Current Checkin (if exists) -->
       <div class="my-checkin-info" id="myCheckinInfo" style="display:none;">
         <div class="place" id="myCheckinPlace">📍 -</div>
         <div class="time" id="myCheckinTime">⏰ -</div>
@@ -156,17 +195,17 @@
   <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div><span>กำลังโหลด...</span></div>
   <div class="toast" id="toast"></div>
   
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     // =====================================================
     // CONFIG
     // =====================================================
     const CONFIG = {
       LIFF_ID: '2008817438-v258p2h9',
-      GAS_URL: 'https://script.google.com/macros/s/AKfycbwg4gQ66uNni4cSauLtN9S0uuBVq-Co0ydTcrVB2mU7aJHy4q9EalBtcpX4V9iPLkFG/exec'
+      GAS_URL: 'https://script.google.com/macros/s/AKfycbwg4gQ66uNni4cSauLtN9S0uuBVq-Co0ydTcrVB2mU7aJHy4q9EalBtcpX4V9iPLkFG/exec',
+      GOOGLE_MAPS_KEY: 'AIzaSyDTS-AxrXpfxj7-14GjX0Asi3QhdYxg7ao'
     };
     
-    let map, markers = [], userProfile = null, currentLat = null, currentLng = null, selectedExpireHours = 6;
+    let map, markers = [], overlays = [], userProfile = null, currentLat = null, currentLng = null, selectedExpireHours = 6;
     let allCheckins = [];
     let myCheckin = null;
     
@@ -189,12 +228,95 @@
         
       } catch (e) {
         console.error('LIFF Error:', e);
-        showToast('LIFF Error: ' + e.message, 'error');
       }
       
-      initMap();
       await loadCheckins();
       showLoading(false);
+    }
+    
+    // =====================================================
+    // GOOGLE MAPS
+    // =====================================================
+    function initMap() {
+      map = new google.maps.Map(document.getElementById('map'), {
+        center: { lat: 13.7563, lng: 100.5018 },
+        zoom: 6,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        styles: [
+          { featureType: "poi", stylers: [{ visibility: "off" }] }
+        ]
+      });
+      
+      // Load checkins after map init
+      loadCheckins();
+    }
+    
+    // Custom Overlay for Profile Markers
+    class ProfileMarker extends google.maps.OverlayView {
+      constructor(position, data, isMe) {
+        super();
+        this.position = position;
+        this.data = data;
+        this.isMe = isMe;
+        this.div = null;
+      }
+      
+      onAdd() {
+        this.div = document.createElement('div');
+        this.div.style.position = 'absolute';
+        this.div.style.cursor = 'pointer';
+        this.div.innerHTML = `
+          <div class="marker-label ${this.isMe ? 'my-marker' : ''}" style="position:relative;">
+            <img src="${this.data.pictureUrl || 'https://via.placeholder.com/40'}" alt="">
+            <div class="name">${this.data.nickname}</div>
+            <div class="place">📍 ${this.data.placeName}</div>
+          </div>
+        `;
+        
+        // Click event
+        this.div.addEventListener('click', () => {
+          const infoWindow = new google.maps.InfoWindow({
+            content: `
+              <div style="padding:10px;min-width:200px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                  <img src="${this.data.pictureUrl || 'https://via.placeholder.com/50'}" style="width:50px;height:50px;border-radius:50%;">
+                  <div>
+                    <div style="font-weight:bold;font-size:16px;">${this.isMe ? '⭐ ' : ''}${this.data.nickname}</div>
+                    <div style="color:#666;font-size:12px;">${this.data.unit}</div>
+                  </div>
+                </div>
+                <div style="color:#DC143C;font-weight:bold;margin-bottom:5px;">📍 ${this.data.placeName}</div>
+                ${this.data.caption ? `<div style="color:#666;font-style:italic;margin-bottom:5px;">"${this.data.caption}"</div>` : ''}
+                <div style="color:#999;font-size:12px;">⏰ หมดอายุใน ${getTimeLeft(new Date(this.data.expireAt))}</div>
+                <a href="https://www.google.com/maps/dir/?api=1&destination=${this.data.lat},${this.data.lng}" target="_blank" style="display:block;margin-top:10px;padding:8px;background:#DC143C;color:#fff;text-align:center;text-decoration:none;border-radius:8px;">🗺️ นำทาง</a>
+              </div>
+            `,
+            position: this.position
+          });
+          infoWindow.open(map);
+        });
+        
+        const panes = this.getPanes();
+        panes.overlayMouseTarget.appendChild(this.div);
+      }
+      
+      draw() {
+        const projection = this.getProjection();
+        const pos = projection.fromLatLngToDivPixel(this.position);
+        if (this.div) {
+          this.div.style.left = (pos.x - 45) + 'px';
+          this.div.style.top = (pos.y - 90) + 'px';
+        }
+      }
+      
+      onRemove() {
+        if (this.div) {
+          this.div.parentNode.removeChild(this.div);
+          this.div = null;
+        }
+      }
     }
     
     // =====================================================
@@ -211,25 +333,17 @@
     }
     
     function updateMyStatus() {
-      if (!userProfile || !allCheckins) return;
-      
-      // Find my checkin
-      myCheckin = allCheckins.find(c => c.id && allCheckins.some(x => x.userId === userProfile.userId)) || null;
-      
-      // Actually find by checking the raw data - need to search by matching
-      myCheckin = null;
+      if (!userProfile) return;
       
       const statusEl = document.getElementById('profileStatus');
       const cancelBtn = document.getElementById('cancelBtn');
       const checkinBtn = document.getElementById('checkinBtn');
       const myCheckinInfo = document.getElementById('myCheckinInfo');
       
-      // Check if user has active checkin by fetching again or checking local
       fetch(CONFIG.GAS_URL + '?action=getCheckins')
         .then(res => res.json())
         .then(data => {
           if (data.success) {
-            // Find my checkin by userId
             myCheckin = data.checkins.find(c => c.userId === userProfile.userId);
             
             if (myCheckin) {
@@ -238,7 +352,6 @@
               cancelBtn.style.display = 'block';
               checkinBtn.textContent = '📍 เปลี่ยนที่';
               
-              // Update modal info
               myCheckinInfo.style.display = 'block';
               document.getElementById('myCheckinPlace').textContent = '📍 ' + myCheckin.placeName;
               document.getElementById('myCheckinTime').textContent = '⏰ หมดอายุใน ' + getTimeLeft(new Date(myCheckin.expireAt));
@@ -254,15 +367,8 @@
     }
     
     // =====================================================
-    // MAP
+    // LOAD & DISPLAY
     // =====================================================
-    function initMap() {
-      map = L.map('map').setView([13.7563, 100.5018], 6);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap'
-      }).addTo(map);
-    }
-    
     async function loadCheckins() {
       try {
         const res = await fetch(CONFIG.GAS_URL + '?action=getCheckins');
@@ -280,43 +386,32 @@
     }
     
     function displayCheckins(checkins) {
-      markers.forEach(m => map.removeLayer(m));
-      markers = [];
+      // Clear old overlays
+      overlays.forEach(o => o.setMap(null));
+      overlays = [];
+      
+      const bounds = new google.maps.LatLngBounds();
       
       checkins.forEach(c => {
-        const isMe = userProfile && c.nickname === userProfile.displayName;
+        const isMe = userProfile && c.userId === userProfile.userId;
+        const position = new google.maps.LatLng(c.lat, c.lng);
         
-        const icon = L.divIcon({
-          className: 'custom-marker',
-          html: `<div style="background:linear-gradient(135deg,${isMe ? '#22c55e' : '#DC143C'},${isMe ? '#16a34a' : '#8B0000'});width:36px;height:36px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;"><span style="transform:rotate(45deg);font-size:16px;">${isMe ? '⭐' : '📍'}</span></div>`,
-          iconSize: [36, 36],
-          iconAnchor: [18, 36],
-          popupAnchor: [0, -36]
-        });
+        // Add pictureUrl (use LINE profile pic for own, placeholder for others)
+        c.pictureUrl = isMe && userProfile ? userProfile.pictureUrl : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(c.nickname) + '&background=DC143C&color=fff';
         
-        const m = L.marker([c.lat, c.lng], { icon })
-          .addTo(map)
-          .bindPopup(createPopup(c, isMe));
-        markers.push(m);
+        const overlay = new ProfileMarker(position, c, isMe);
+        overlay.setMap(map);
+        overlays.push(overlay);
+        
+        bounds.extend(position);
       });
       
-      if (markers.length > 0) {
-        map.fitBounds(L.featureGroup(markers).getBounds().pad(0.1));
+      if (checkins.length > 0) {
+        map.fitBounds(bounds);
+        if (checkins.length === 1) {
+          map.setZoom(15);
+        }
       }
-    }
-    
-    function createPopup(c, isMe) {
-      const timeLeft = getTimeLeft(new Date(c.expireAt));
-      return `
-        <div class="popup-content">
-          <h3>${isMe ? '⭐ ' : ''}${c.nickname}</h3>
-          <div class="unit">${c.unit}</div>
-          <div class="place">📍 ${c.placeName}</div>
-          ${c.caption ? `<div class="caption">"${c.caption}"</div>` : ''}
-          <div class="time">⏰ หมดอายุใน ${timeLeft}</div>
-          <a class="nav-btn" href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}" target="_blank">🗺️ นำทาง</a>
-        </div>
-      `;
     }
     
     function getTimeLeft(exp) {
@@ -420,7 +515,8 @@
           document.getElementById('placeName').value = '';
           document.getElementById('caption').value = '';
           await loadCheckins();
-          map.setView([currentLat, currentLng], 15);
+          map.setCenter({ lat: currentLat, lng: currentLng });
+          map.setZoom(15);
         } else {
           showToast('❌ ' + (data.error || 'เกิดข้อผิดพลาด'), 'error');
         }
@@ -432,11 +528,10 @@
     }
     
     // =====================================================
-    // CANCEL CHECK-IN
+    // CANCEL
     // =====================================================
     async function cancelCheckin() {
       if (!userProfile) return;
-      
       if (!confirm('ยืนยันยกเลิกหมุด?')) return;
       
       showLoading(true);
@@ -489,8 +584,11 @@
       setTimeout(() => t.classList.remove('show'), 3000);
     }
     
-    // Start
+    // Start LIFF first
     document.addEventListener('DOMContentLoaded', init);
   </script>
+  
+  <!-- Google Maps -->
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDTS-AxrXpfxj7-14GjX0Asi3QhdYxg7ao&callback=initMap"></script>
 </body>
 </html>
