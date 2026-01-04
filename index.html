@@ -135,11 +135,8 @@
     </div>
   </div>
   
-  <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div><span>กำลังโหลด...</span></div>
+  <div class="loading-overlay active" id="loadingOverlay"><div class="spinner"></div><span>กำลังโหลด...</span></div>
   <div class="toast" id="toast"></div>
-  
-  <!-- Google Maps FIRST -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDTS-AxrXpfxj7-14GjX0Asi3QhdYxg7ao"></script>
   
   <script>
     // =====================================================
@@ -153,133 +150,149 @@
     let map, markers = [], userProfile = null, currentLat = null, currentLng = null, selectedExpireHours = 6;
     let allCheckins = [];
     let myCheckin = null;
+    let ProfileMarker = null; // Will be defined after Google Maps loads
     
     // =====================================================
-    // CUSTOM OVERLAY CLASS (Define before use!)
+    // GOOGLE MAPS CALLBACK - This runs when Maps is ready
     // =====================================================
-    class ProfileMarker extends google.maps.OverlayView {
-      constructor(position, data, isMe) {
-        super();
-        this.position = position;
-        this.data = data;
-        this.isMe = isMe;
-        this.div = null;
-      }
+    function initMap() {
+      console.log('Google Maps loaded!');
       
-      onAdd() {
-        this.div = document.createElement('div');
-        this.div.style.position = 'absolute';
-        this.div.style.cursor = 'pointer';
-        this.div.style.zIndex = this.isMe ? '100' : '50';
-        
-        const borderColor = this.isMe ? '#22c55e' : '#DC143C';
-        
-        this.div.innerHTML = `
-          <div style="
-            background: #fff;
-            border-radius: 12px;
-            padding: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            text-align: center;
-            min-width: 80px;
-            border: 3px solid ${borderColor};
-            position: relative;
-          ">
-            <img src="${this.data.pictureUrl}" style="
-              width: 45px;
-              height: 45px;
-              border-radius: 50%;
-              margin-bottom: 4px;
-              border: 2px solid ${borderColor};
-              display: block;
-              margin-left: auto;
-              margin-right: auto;
-            " onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(this.data.nickname)}&background=DC143C&color=fff'">
-            <div style="
-              font-size: 11px;
-              font-weight: bold;
-              color: #333;
-              white-space: nowrap;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              max-width: 75px;
-            ">${this.isMe ? '⭐ ' : ''}${this.data.nickname}</div>
-            <div style="
-              font-size: 10px;
-              color: ${borderColor};
-              white-space: nowrap;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              max-width: 75px;
-            ">📍 ${this.data.placeName}</div>
-            <div style="
-              position: absolute;
-              bottom: -10px;
-              left: 50%;
-              transform: translateX(-50%);
-              width: 0;
-              height: 0;
-              border-left: 10px solid transparent;
-              border-right: 10px solid transparent;
-              border-top: 10px solid ${borderColor};
-            "></div>
-          </div>
-        `;
-        
-        // Click event
-        this.div.addEventListener('click', () => {
-          const infoWindow = new google.maps.InfoWindow({
-            content: `
-              <div style="padding:10px;min-width:200px;">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-                  <img src="${this.data.pictureUrl}" style="width:50px;height:50px;border-radius:50%;" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(this.data.nickname)}&background=DC143C&color=fff'">
-                  <div>
-                    <div style="font-weight:bold;font-size:16px;">${this.isMe ? '⭐ ' : ''}${this.data.nickname}</div>
-                    <div style="color:#666;font-size:12px;">${this.data.unit}</div>
-                  </div>
-                </div>
-                <div style="color:#DC143C;font-weight:bold;margin-bottom:5px;">📍 ${this.data.placeName}</div>
-                ${this.data.caption ? `<div style="color:#666;font-style:italic;margin-bottom:5px;">"${this.data.caption}"</div>` : ''}
-                <div style="color:#999;font-size:12px;">⏰ หมดอายุใน ${getTimeLeft(new Date(this.data.expireAt))}</div>
-                <a href="https://www.google.com/maps/dir/?api=1&destination=${this.data.lat},${this.data.lng}" target="_blank" style="display:block;margin-top:10px;padding:8px;background:#DC143C;color:#fff;text-align:center;text-decoration:none;border-radius:8px;">🗺️ นำทาง</a>
-              </div>
-            `,
-            position: this.position
-          });
-          infoWindow.open(map);
-        });
-        
-        const panes = this.getPanes();
-        panes.overlayMouseTarget.appendChild(this.div);
-      }
+      // Create map
+      map = new google.maps.Map(document.getElementById('map'), {
+        center: { lat: 13.7563, lng: 100.5018 },
+        zoom: 6,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        zoomControl: true,
+        styles: [
+          { featureType: "poi.business", stylers: [{ visibility: "off" }] }
+        ]
+      });
       
-      draw() {
-        const projection = this.getProjection();
-        const pos = projection.fromLatLngToDivPixel(this.position);
-        if (this.div) {
-          this.div.style.left = (pos.x - 45) + 'px';
-          this.div.style.top = (pos.y - 100) + 'px';
-        }
-      }
-      
-      onRemove() {
-        if (this.div) {
-          this.div.parentNode.removeChild(this.div);
+      // Define ProfileMarker class AFTER Google Maps is loaded
+      ProfileMarker = class extends google.maps.OverlayView {
+        constructor(position, data, isMe) {
+          super();
+          this.position = position;
+          this.data = data;
+          this.isMe = isMe;
           this.div = null;
         }
-      }
+        
+        onAdd() {
+          this.div = document.createElement('div');
+          this.div.style.position = 'absolute';
+          this.div.style.cursor = 'pointer';
+          this.div.style.zIndex = this.isMe ? '100' : '50';
+          
+          const borderColor = this.isMe ? '#22c55e' : '#DC143C';
+          
+          this.div.innerHTML = `
+            <div style="
+              background: #fff;
+              border-radius: 12px;
+              padding: 8px;
+              box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+              text-align: center;
+              min-width: 80px;
+              border: 3px solid ${borderColor};
+              position: relative;
+            ">
+              <img src="${this.data.pictureUrl}" style="
+                width: 45px;
+                height: 45px;
+                border-radius: 50%;
+                margin-bottom: 4px;
+                border: 2px solid ${borderColor};
+                display: block;
+                margin-left: auto;
+                margin-right: auto;
+              " onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(this.data.nickname)}&background=DC143C&color=fff'">
+              <div style="
+                font-size: 11px;
+                font-weight: bold;
+                color: #333;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 75px;
+              ">${this.isMe ? '⭐ ' : ''}${this.data.nickname}</div>
+              <div style="
+                font-size: 10px;
+                color: ${borderColor};
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 75px;
+              ">📍 ${this.data.placeName}</div>
+              <div style="
+                position: absolute;
+                bottom: -10px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 0;
+                height: 0;
+                border-left: 10px solid transparent;
+                border-right: 10px solid transparent;
+                border-top: 10px solid ${borderColor};
+              "></div>
+            </div>
+          `;
+          
+          // Click event
+          this.div.addEventListener('click', () => {
+            const infoWindow = new google.maps.InfoWindow({
+              content: `
+                <div style="padding:10px;min-width:200px;">
+                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                    <img src="${this.data.pictureUrl}" style="width:50px;height:50px;border-radius:50%;" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(this.data.nickname)}&background=DC143C&color=fff'">
+                    <div>
+                      <div style="font-weight:bold;font-size:16px;">${this.isMe ? '⭐ ' : ''}${this.data.nickname}</div>
+                      <div style="color:#666;font-size:12px;">${this.data.unit}</div>
+                    </div>
+                  </div>
+                  <div style="color:#DC143C;font-weight:bold;margin-bottom:5px;">📍 ${this.data.placeName}</div>
+                  ${this.data.caption ? `<div style="color:#666;font-style:italic;margin-bottom:5px;">"${this.data.caption}"</div>` : ''}
+                  <div style="color:#999;font-size:12px;">⏰ หมดอายุใน ${getTimeLeft(new Date(this.data.expireAt))}</div>
+                  <a href="https://www.google.com/maps/dir/?api=1&destination=${this.data.lat},${this.data.lng}" target="_blank" style="display:block;margin-top:10px;padding:8px;background:#DC143C;color:#fff;text-align:center;text-decoration:none;border-radius:8px;">🗺️ นำทาง</a>
+                </div>
+              `,
+              position: this.position
+            });
+            infoWindow.open(map);
+          });
+          
+          const panes = this.getPanes();
+          panes.overlayMouseTarget.appendChild(this.div);
+        }
+        
+        draw() {
+          const projection = this.getProjection();
+          const pos = projection.fromLatLngToDivPixel(this.position);
+          if (this.div) {
+            this.div.style.left = (pos.x - 45) + 'px';
+            this.div.style.top = (pos.y - 100) + 'px';
+          }
+        }
+        
+        onRemove() {
+          if (this.div) {
+            this.div.parentNode.removeChild(this.div);
+            this.div = null;
+          }
+        }
+      };
+      
+      // Now init LIFF and load data
+      initLIFF();
     }
     
     // =====================================================
-    // INIT
+    // LIFF INIT
     // =====================================================
-    async function init() {
-      showLoading(true);
-      
-      // Init Map first
-      initMap();
-      
-      // Init LIFF
+    async function initLIFF() {
       try {
         await liff.init({ liffId: CONFIG.LIFF_ID });
         
@@ -298,23 +311,6 @@
       // Load data
       await loadCheckins();
       showLoading(false);
-    }
-    
-    // =====================================================
-    // GOOGLE MAPS
-    // =====================================================
-    function initMap() {
-      map = new google.maps.Map(document.getElementById('map'), {
-        center: { lat: 13.7563, lng: 100.5018 },
-        zoom: 6,
-        mapTypeControl: false,
-        streetViewControl: false,
-        fullscreenControl: false,
-        zoomControl: true,
-        styles: [
-          { featureType: "poi.business", stylers: [{ visibility: "off" }] }
-        ]
-      });
     }
     
     // =====================================================
@@ -338,7 +334,6 @@
       const checkinBtn = document.getElementById('checkinBtn');
       const myCheckinInfo = document.getElementById('myCheckinInfo');
       
-      // Find my checkin from loaded data
       myCheckin = allCheckins.find(c => c.userId === userProfile.userId);
       
       if (myCheckin) {
@@ -383,7 +378,7 @@
       markers.forEach(m => m.setMap(null));
       markers = [];
       
-      if (checkins.length === 0) return;
+      if (checkins.length === 0 || !ProfileMarker) return;
       
       const bounds = new google.maps.LatLngBounds();
       
@@ -407,7 +402,6 @@
       
       map.fitBounds(bounds);
       
-      // Zoom out a bit if only 1 marker
       if (checkins.length === 1) {
         setTimeout(() => map.setZoom(15), 100);
       }
@@ -582,9 +576,9 @@
       t.className = 'toast show ' + type;
       setTimeout(() => t.classList.remove('show'), 3000);
     }
-    
-    // Start when page loads
-    document.addEventListener('DOMContentLoaded', init);
   </script>
+  
+  <!-- Google Maps - loads last and calls initMap when ready -->
+  <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDTS-AxrXpfxj7-14GjX0Asi3QhdYxg7ao&callback=initMap"></script>
 </body>
 </html>
