@@ -135,18 +135,14 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        // =====================================================
-        // CONFIG - ใส่ URL ของ GAS ที่ Deploy ใหม่ตรงนี้
-        // =====================================================
         const CONFIG = {
             LIFF_ID: '2008817438-v258p2h9',
-            GAS_URL: 'ใส่_URL_GAS_ใหม่_ตรงนี้'
+            GAS_URL: 'https://script.google.com/macros/s/AKfycbwg28bbMZqSHly3IxvDWxh6VHXKWv5YlYUiOyVcceoNTDsECmmu3LkMZbObqy6yhJeF/exec'
         };
 
         let map, markers = [], userProfile = null, currentLat = null, currentLng = null;
         let ProfileMarkerClass = null;
 
-        // คำนวณเวลาที่ผ่านไป
         function getTimeAgo(timestamp) {
             const now = new Date();
             const then = new Date(timestamp);
@@ -161,7 +157,7 @@
         }
 
         function initMap() {
-            console.log('Google Maps Callback Triggered');
+            console.log('Google Maps loaded!');
             const mapContainer = document.getElementById('map');
             
             map = new google.maps.Map(mapContainer, {
@@ -174,7 +170,6 @@
                 styles: [{ featureType: "poi.business", stylers: [{ visibility: "off" }] }]
             });
 
-            // Custom Overlay with status and time
             ProfileMarkerClass = class extends google.maps.OverlayView {
                 constructor(pos, data, isMe) {
                     super();
@@ -266,28 +261,28 @@
                     renderMarkers(data.checkins);
                     document.getElementById('activeCount').textContent = data.checkins.length + ' คน';
                     
-                    const myPoint = data.checkins.find(c => c.userId === userProfile.userId);
-                    const statusEl = document.getElementById('profileStatus');
-                    const cancelBtn = document.getElementById('cancelBtn');
-                    const checkinBtn = document.getElementById('checkinBtn');
-                    
-                    if (myPoint) {
-                        const timeAgo = getTimeAgo(myPoint.checkinTime);
-                        let statusText = '📍 ' + myPoint.placeName;
-                        if (myPoint.caption) statusText += ' - "' + myPoint.caption + '"';
-                        statusText += ' (' + timeAgo + ')';
-                        statusEl.textContent = statusText;
-                        statusEl.className = 'status active';
-                        cancelBtn.style.display = 'block';
-                        checkinBtn.textContent = '📍 เปลี่ยนที่';
-                    } else {
-                        statusEl.textContent = '⚪ ยังไม่ได้แชร์โล';
-                        statusEl.className = 'status inactive';
-                        cancelBtn.style.display = 'none';
-                        checkinBtn.textContent = '📍 แชร์โล';
+                    if (userProfile) {
+                        const myPoint = data.checkins.find(c => c.userId === userProfile.userId);
+                        const statusEl = document.getElementById('profileStatus');
+                        const cancelBtn = document.getElementById('cancelBtn');
+                        const checkinBtn = document.getElementById('checkinBtn');
+                        
+                        if (myPoint) {
+                            const timeAgo = getTimeAgo(myPoint.checkinTime);
+                            let statusText = '📍 ' + myPoint.placeName;
+                            if (myPoint.caption) statusText += ' - "' + myPoint.caption + '"';
+                            statusText += ' (' + timeAgo + ')';
+                            statusEl.textContent = statusText;
+                            statusEl.className = 'status active';
+                            cancelBtn.style.display = 'block';
+                            checkinBtn.textContent = '📍 เปลี่ยนที่';
+                        } else {
+                            statusEl.textContent = '⚪ ยังไม่ได้แชร์โล';
+                            statusEl.className = 'status inactive';
+                            cancelBtn.style.display = 'none';
+                            checkinBtn.textContent = '📍 แชร์โล';
+                        }
                     }
-                } else {
-                    showToast('โหลดข้อมูลไม่สำเร็จ: ' + (data.error || 'Unknown'));
                 }
             } catch (err) {
                 console.error('Fetch error:', err);
@@ -367,8 +362,6 @@
                     document.getElementById('placeName').value = '';
                     document.getElementById('caption').value = '';
                     await refreshData();
-                } else {
-                    showToast('❌ ' + (data.error || 'เกิดข้อผิดพลาด'));
                 }
             } catch (err) { 
                 console.error('Submit error:', err);
