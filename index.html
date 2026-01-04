@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>📍 Map รวมพล รุ่น 74</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1a1a2e;color:#fff;min-height:100vh}
+    .header{background:linear-gradient(135deg,#8B0000,#DC143C);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:0;right:0;z-index:1000;box-shadow:0 2px 10px rgba(0,0,0,0.3)}
+    .header h1{font-size:18px;display:flex;align-items:center;gap:8px}
+    .header .count{background:rgba(255,255,255,0.2);padding:4px 10px;border-radius:20px;font-size:13px}
+    #map{position:fixed;top:52px;bottom:70px;left:0;right:0;z-index:1}
+    .bottom-actions{position:fixed;bottom:0;left:0;right:0;background:#1a1a2e;padding:12px 16px;display:flex;gap:10px;z-index:1000;border-top:1px solid #333}
+    .btn{flex:1;padding:14px;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform 0.2s}
+    .btn:active{transform:scale(0.96)}
+    .btn-primary{background:linear-gradient(135deg,#DC143C,#8B0000);color:#fff}
+    .btn-secondary{background:#333;color:#fff}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:2000;align-items:flex-end;justify-content:center}
+    .modal-overlay.active{display:flex}
+    .modal{background:#1a1a2e;width:100%;max-width:500px;border-radius:20px 20px 0 0;padding:20px;max-height:85vh;overflow-y:auto}
+    .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+    .modal-header h2{font-size:20px;display:flex;align-items:center;gap:8px}
+    .modal-close{background:#333;border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer}
+    .form-group{margin-bottom:16px}
+    .form-group label{display:block;margin-bottom:8px;font-size:14px;color:#aaa}
+    .form-group input,.form-group textarea{width:100%;padding:14px;border:1px solid #333;border-radius:12px;background:#0d0d1a;color:#fff;font-size:16px}
+    .form-group input:focus,.form-group textarea:focus{outline:none;border-color:#DC143C}
+    .form-group textarea{resize:none;height:80px}
+    .expire-options{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+    .expire-option{padding:12px 8px;background:#0d0d1a;border:2px solid #333;border-radius:12px;text-align:center;cursor:pointer;transition:all 0.2s}
+    .expire-option.selected{border-color:#DC143C;background:rgba(220,20,60,0.1)}
+    .expire-option .icon{font-size:24px;margin-bottom:4px}
+    .expire-option .label{font-size:12px;color:#aaa}
+    .gps-status{background:#0d0d1a;padding:12px;border-radius:12px;display:flex;align-items:center;gap:10px;margin-bottom:16px}
+    .gps-status.success{border:1px solid #22c55e}
+    .gps-status.loading{border:1px solid #f59e0b}
+    .gps-status.error{border:1px solid #ef4444}
+    .popup-content{min-width:200px}
+    .popup-content h3{font-size:16px;margin-bottom:4px;color:#1a1a2e}
+    .popup-content .unit{font-size:12px;color:#666;margin-bottom:8px}
+    .popup-content .place{font-size:14px;font-weight:600;color:#DC143C;margin-bottom:4px}
+    .popup-content .caption{font-size:13px;color:#333;font-style:italic;margin-bottom:8px}
+    .popup-content .time{font-size:11px;color:#999}
+    .popup-content .nav-btn{display:block;width:100%;margin-top:10px;padding:8px;background:#DC143C;color:#fff;text-align:center;text-decoration:none;border-radius:8px;font-size:13px}
+    .loading-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:3000;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+    .loading-overlay.active{display:flex}
+    .spinner{width:50px;height:50px;border:4px solid #333;border-top-color:#DC143C;border-radius:50%;animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(100px);background:#333;color:#fff;padding:12px 24px;border-radius:30px;font-size:14px;z-index:2500;opacity:0;transition:all 0.3s}
+    .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+    .toast.success{background:#22c55e}
+    .toast.error{background:#ef4444}
+    .user-info{background:#0d0d1a;padding:12px;border-radius:12px;margin-bottom:16px;display:flex;align-items:center;gap:12px}
+    .user-info img{width:40px;height:40px;border-radius:50%}
+    .user-info .name{font-weight:600}
+    .user-info .status{font-size:12px;color:#22c55e}
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>📍 Map รวมพล</h1>
+    <span class="count" id="activeCount">0 คน</span>
+  </header>
+  
+  <div id="map"></div>
+  
+  <div class="bottom-actions">
+    <button class="btn btn-secondary" onclick="refreshMap()">🔄 รีเฟรช</button>
+    <button class="btn btn-primary" onclick="openCheckinModal()">📍 แชร์โลของฉัน</button>
+  </div>
+  
+  <div class="modal-overlay" id="checkinModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>📍 แชร์โล</h2>
+        <button class="modal-close" onclick="closeCheckinModal()">✕</button>
+      </div>
+      
+      <!-- User Info -->
+      <div class="user-info" id="userInfo" style="display:none;">
+        <img id="userPic" src="" alt="">
+        <div>
+          <div class="name" id="userName">-</div>
+          <div class="status">✅ เข้าสู่ระบบแล้ว</div>
+        </div>
+      </div>
+      
+      <div class="gps-status loading" id="gpsStatus">
+        <span>📡</span>
+        <span id="gpsText">กำลังหาตำแหน่ง...</span>
+      </div>
+      
+      <form id="checkinForm" onsubmit="submitCheckin(event)">
+        <div class="form-group">
+          <label>ชื่อสถานที่ *</label>
+          <input type="text" id="placeName" placeholder="เช่น ร้านเหล้าเจ๊กเม้ง, ห้าง Central" required>
+        </div>
+        <div class="form-group">
+          <label>Caption (ไม่บังคับ)</label>
+          <textarea id="caption" placeholder="เช่น มากินได้เลยพี่น้อง"></textarea>
+        </div>
+        <div class="form-group">
+          <label>หมดอายุใน</label>
+          <div class="expire-options">
+            <div class="expire-option" data-hours="3" onclick="selectExpire(this)"><div class="icon">⚡</div><div class="label">3 ชม.</div></div>
+            <div class="expire-option selected" data-hours="6" onclick="selectExpire(this)"><div class="icon">🍺</div><div class="label">6 ชม.</div></div>
+            <div class="expire-option" data-hours="12" onclick="selectExpire(this)"><div class="icon">🌙</div><div class="label">12 ชม.</div></div>
+            <div class="expire-option" data-hours="24" onclick="selectExpire(this)"><div class="icon">📍</div><div class="label">24 ชม.</div></div>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:10px;">✅ แชร์โล</button>
+      </form>
+    </div>
+  </div>
+  
+  <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div><span>กำลังโหลด...</span></div>
+  <div class="toast" id="toast"></div>
+  
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // =====================================================
+    // CONFIG - แก้ไขตรงนี้!
+    // =====================================================
+    const CONFIG = {
+      LIFF_ID: '2008817438-v258p2h9',
+      GAS_URL: 'https://script.google.com/macros/s/AKfycbwg4gQ66uNni4cSauLtN9S0uuBVq-Co0ydTcrVB2mU7aJHy4q9EalBtcpX4V9iPLkFG/exec'
+    };
+    // =====================================================
+    
+    let map, markers = [], userProfile = null, currentLat = null, currentLng = null, selectedExpireHours = 6;
+    
+    // Initialize
+    async function init() {
+      showLoading(true);
+      
+      try {
+        // Init LIFF
+        await liff.init({ liffId: CONFIG.LIFF_ID });
+        console.log('LIFF initialized');
+        
+        // Check login
+        if (!liff.isLoggedIn()) {
+          console.log('Not logged in, redirecting...');
+          liff.login();
+          return;
+        }
+        
+        // Get profile
+        userProfile = await liff.getProfile();
+        console.log('User:', userProfile.displayName);
+        
+      } catch (e) {
+        console.error('LIFF Error:', e);
+        showToast('LIFF Error: ' + e.message, 'error');
+      }
+      
+      // Init map
+      initMap();
+      
+      // Load checkins
+      await loadCheckins();
+      
+      showLoading(false);
+    }
+    
+    function initMap() {
+      map = L.map('map').setView([13.7563, 100.5018], 6);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+    }
+    
+    async function loadCheckins() {
+      try {
+        const res = await fetch(CONFIG.GAS_URL + '?action=getCheckins');
+        const data = await res.json();
+        
+        if (data.success) {
+          displayCheckins(data.checkins);
+          document.getElementById('activeCount').textContent = data.checkins.length + ' คน';
+        }
+      } catch (e) {
+        console.error('Load error:', e);
+      }
+    }
+    
+    function displayCheckins(checkins) {
+      // Clear markers
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+      
+      // Icon
+      const icon = L.divIcon({
+        className: 'custom-marker',
+        html: '<div style="background:linear-gradient(135deg,#DC143C,#8B0000);width:36px;height:36px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;"><span style="transform:rotate(45deg);font-size:16px;">📍</span></div>',
+        iconSize: [36, 36],
+        iconAnchor: [18, 36],
+        popupAnchor: [0, -36]
+      });
+      
+      // Add markers
+      checkins.forEach(c => {
+        const m = L.marker([c.lat, c.lng], { icon })
+          .addTo(map)
+          .bindPopup(createPopup(c));
+        markers.push(m);
+      });
+      
+      // Fit bounds
+      if (markers.length > 0) {
+        map.fitBounds(L.featureGroup(markers).getBounds().pad(0.1));
+      }
+    }
+    
+    function createPopup(c) {
+      const timeLeft = getTimeLeft(new Date(c.expireAt));
+      return `
+        <div class="popup-content">
+          <h3>${c.nickname}</h3>
+          <div class="unit">${c.unit}</div>
+          <div class="place">📍 ${c.placeName}</div>
+          ${c.caption ? `<div class="caption">"${c.caption}"</div>` : ''}
+          <div class="time">⏰ หมดอายุใน ${timeLeft}</div>
+          <a class="nav-btn" href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}" target="_blank">🗺️ นำทาง</a>
+        </div>
+      `;
+    }
+    
+    function getTimeLeft(exp) {
+      const diff = exp - new Date();
+      if (diff <= 0) return 'หมดอายุแล้ว';
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      return h > 0 ? h + ' ชม. ' + m + ' นาที' : m + ' นาที';
+    }
+    
+    function openCheckinModal() {
+      document.getElementById('checkinModal').classList.add('active');
+      
+      // Show user info
+      if (userProfile) {
+        document.getElementById('userInfo').style.display = 'flex';
+        document.getElementById('userPic').src = userProfile.pictureUrl || '';
+        document.getElementById('userName').textContent = userProfile.displayName;
+      }
+      
+      getCurrentLocation();
+    }
+    
+    function closeCheckinModal() {
+      document.getElementById('checkinModal').classList.remove('active');
+    }
+    
+    function getCurrentLocation() {
+      const s = document.getElementById('gpsStatus');
+      const t = document.getElementById('gpsText');
+      
+      s.className = 'gps-status loading';
+      t.textContent = 'กำลังหาตำแหน่ง...';
+      
+      if (!navigator.geolocation) {
+        s.className = 'gps-status error';
+        t.textContent = 'Browser ไม่รองรับ GPS';
+        return;
+      }
+      
+      navigator.geolocation.getCurrentPosition(
+        p => {
+          currentLat = p.coords.latitude;
+          currentLng = p.coords.longitude;
+          s.className = 'gps-status success';
+          t.textContent = '✅ พบตำแหน่งแล้ว';
+        },
+        e => {
+          s.className = 'gps-status error';
+          t.textContent = '❌ กรุณาเปิด GPS';
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+    
+    function selectExpire(el) {
+      document.querySelectorAll('.expire-option').forEach(e => e.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedExpireHours = parseInt(el.dataset.hours);
+    }
+    
+    async function submitCheckin(e) {
+      e.preventDefault();
+      
+      if (!userProfile) {
+        showToast('กรุณาเข้าสู่ระบบก่อน', 'error');
+        liff.login();
+        return;
+      }
+      
+      if (!currentLat) {
+        showToast('กรุณารอหาตำแหน่ง GPS', 'error');
+        return;
+      }
+      
+      const placeName = document.getElementById('placeName').value.trim();
+      if (!placeName) {
+        showToast('กรุณาใส่ชื่อสถานที่', 'error');
+        return;
+      }
+      
+      showLoading(true);
+      
+      try {
+        const res = await fetch(CONFIG.GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            action: 'addCheckin',
+            userId: userProfile.userId,
+            lat: currentLat,
+            lng: currentLng,
+            placeName: placeName,
+            caption: document.getElementById('caption').value.trim(),
+            expireHours: selectedExpireHours
+          })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          showToast('✅ แชร์โลสำเร็จ!', 'success');
+          closeCheckinModal();
+          document.getElementById('placeName').value = '';
+          document.getElementById('caption').value = '';
+          await loadCheckins();
+          map.setView([currentLat, currentLng], 15);
+        } else {
+          showToast('❌ ' + (data.error || 'เกิดข้อผิดพลาด'), 'error');
+        }
+      } catch (err) {
+        showToast('❌ ' + err.message, 'error');
+      }
+      
+      showLoading(false);
+    }
+    
+    function refreshMap() {
+      showLoading(true);
+      loadCheckins().then(() => {
+        showLoading(false);
+        showToast('🔄 รีเฟรชแล้ว', 'success');
+      });
+    }
+    
+    function showLoading(s) {
+      document.getElementById('loadingOverlay').classList.toggle('active', s);
+    }
+    
+    function showToast(msg, type = '') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast show ' + type;
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+    
+    // Start
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
