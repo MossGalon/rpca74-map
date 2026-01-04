@@ -69,63 +69,6 @@
     .my-checkin-info{background:#0d0d1a;padding:12px;border-radius:12px;margin-bottom:16px;border:1px solid #22c55e}
     .my-checkin-info .place{font-weight:600;color:#22c55e;margin-bottom:4px}
     .my-checkin-info .time{font-size:12px;color:#aaa}
-    
-    /* Custom Marker Label Styles */
-    .marker-label{
-      background:#fff;
-      border-radius:12px;
-      padding:8px;
-      box-shadow:0 2px 10px rgba(0,0,0,0.3);
-      text-align:center;
-      min-width:80px;
-      border:2px solid #DC143C;
-    }
-    .marker-label.my-marker{
-      border-color:#22c55e;
-    }
-    .marker-label img{
-      width:40px;
-      height:40px;
-      border-radius:50%;
-      margin-bottom:4px;
-      border:2px solid #DC143C;
-    }
-    .marker-label.my-marker img{
-      border-color:#22c55e;
-    }
-    .marker-label .name{
-      font-size:11px;
-      font-weight:bold;
-      color:#333;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      max-width:70px;
-    }
-    .marker-label .place{
-      font-size:10px;
-      color:#DC143C;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      max-width:70px;
-    }
-    .marker-label.my-marker .place{
-      color:#22c55e;
-    }
-    .marker-label::after{
-      content:'';
-      position:absolute;
-      bottom:-10px;
-      left:50%;
-      transform:translateX(-50%);
-      border-left:10px solid transparent;
-      border-right:10px solid transparent;
-      border-top:10px solid #DC143C;
-    }
-    .marker-label.my-marker::after{
-      border-top-color:#22c55e;
-    }
   </style>
 </head>
 <body>
@@ -195,65 +138,25 @@
   <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div><span>กำลังโหลด...</span></div>
   <div class="toast" id="toast"></div>
   
+  <!-- Google Maps FIRST -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDTS-AxrXpfxj7-14GjX0Asi3QhdYxg7ao"></script>
+  
   <script>
     // =====================================================
     // CONFIG
     // =====================================================
     const CONFIG = {
       LIFF_ID: '2008817438-v258p2h9',
-      GAS_URL: 'https://script.google.com/macros/s/AKfycbwg4gQ66uNni4cSauLtN9S0uuBVq-Co0ydTcrVB2mU7aJHy4q9EalBtcpX4V9iPLkFG/exec',
-      GOOGLE_MAPS_KEY: 'AIzaSyDTS-AxrXpfxj7-14GjX0Asi3QhdYxg7ao'
+      GAS_URL: 'https://script.google.com/macros/s/AKfycbwg4gQ66uNni4cSauLtN9S0uuBVq-Co0ydTcrVB2mU7aJHy4q9EalBtcpX4V9iPLkFG/exec'
     };
     
-    let map, markers = [], overlays = [], userProfile = null, currentLat = null, currentLng = null, selectedExpireHours = 6;
+    let map, markers = [], userProfile = null, currentLat = null, currentLng = null, selectedExpireHours = 6;
     let allCheckins = [];
     let myCheckin = null;
     
     // =====================================================
-    // INIT
+    // CUSTOM OVERLAY CLASS (Define before use!)
     // =====================================================
-    async function init() {
-      showLoading(true);
-      
-      try {
-        await liff.init({ liffId: CONFIG.LIFF_ID });
-        
-        if (!liff.isLoggedIn()) {
-          liff.login();
-          return;
-        }
-        
-        userProfile = await liff.getProfile();
-        showProfile();
-        
-      } catch (e) {
-        console.error('LIFF Error:', e);
-      }
-      
-      await loadCheckins();
-      showLoading(false);
-    }
-    
-    // =====================================================
-    // GOOGLE MAPS
-    // =====================================================
-    function initMap() {
-      map = new google.maps.Map(document.getElementById('map'), {
-        center: { lat: 13.7563, lng: 100.5018 },
-        zoom: 6,
-        mapTypeControl: false,
-        streetViewControl: false,
-        fullscreenControl: false,
-        styles: [
-          { featureType: "poi", stylers: [{ visibility: "off" }] }
-        ]
-      });
-      
-      // Load checkins after map init
-      loadCheckins();
-    }
-    
-    // Custom Overlay for Profile Markers
     class ProfileMarker extends google.maps.OverlayView {
       constructor(position, data, isMe) {
         super();
@@ -267,11 +170,59 @@
         this.div = document.createElement('div');
         this.div.style.position = 'absolute';
         this.div.style.cursor = 'pointer';
+        this.div.style.zIndex = this.isMe ? '100' : '50';
+        
+        const borderColor = this.isMe ? '#22c55e' : '#DC143C';
+        
         this.div.innerHTML = `
-          <div class="marker-label ${this.isMe ? 'my-marker' : ''}" style="position:relative;">
-            <img src="${this.data.pictureUrl || 'https://via.placeholder.com/40'}" alt="">
-            <div class="name">${this.data.nickname}</div>
-            <div class="place">📍 ${this.data.placeName}</div>
+          <div style="
+            background: #fff;
+            border-radius: 12px;
+            padding: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            text-align: center;
+            min-width: 80px;
+            border: 3px solid ${borderColor};
+            position: relative;
+          ">
+            <img src="${this.data.pictureUrl}" style="
+              width: 45px;
+              height: 45px;
+              border-radius: 50%;
+              margin-bottom: 4px;
+              border: 2px solid ${borderColor};
+              display: block;
+              margin-left: auto;
+              margin-right: auto;
+            " onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(this.data.nickname)}&background=DC143C&color=fff'">
+            <div style="
+              font-size: 11px;
+              font-weight: bold;
+              color: #333;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              max-width: 75px;
+            ">${this.isMe ? '⭐ ' : ''}${this.data.nickname}</div>
+            <div style="
+              font-size: 10px;
+              color: ${borderColor};
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              max-width: 75px;
+            ">📍 ${this.data.placeName}</div>
+            <div style="
+              position: absolute;
+              bottom: -10px;
+              left: 50%;
+              transform: translateX(-50%);
+              width: 0;
+              height: 0;
+              border-left: 10px solid transparent;
+              border-right: 10px solid transparent;
+              border-top: 10px solid ${borderColor};
+            "></div>
           </div>
         `;
         
@@ -281,7 +232,7 @@
             content: `
               <div style="padding:10px;min-width:200px;">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-                  <img src="${this.data.pictureUrl || 'https://via.placeholder.com/50'}" style="width:50px;height:50px;border-radius:50%;">
+                  <img src="${this.data.pictureUrl}" style="width:50px;height:50px;border-radius:50%;" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(this.data.nickname)}&background=DC143C&color=fff'">
                   <div>
                     <div style="font-weight:bold;font-size:16px;">${this.isMe ? '⭐ ' : ''}${this.data.nickname}</div>
                     <div style="color:#666;font-size:12px;">${this.data.unit}</div>
@@ -307,7 +258,7 @@
         const pos = projection.fromLatLngToDivPixel(this.position);
         if (this.div) {
           this.div.style.left = (pos.x - 45) + 'px';
-          this.div.style.top = (pos.y - 90) + 'px';
+          this.div.style.top = (pos.y - 100) + 'px';
         }
       }
       
@@ -317,6 +268,53 @@
           this.div = null;
         }
       }
+    }
+    
+    // =====================================================
+    // INIT
+    // =====================================================
+    async function init() {
+      showLoading(true);
+      
+      // Init Map first
+      initMap();
+      
+      // Init LIFF
+      try {
+        await liff.init({ liffId: CONFIG.LIFF_ID });
+        
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+        
+        userProfile = await liff.getProfile();
+        showProfile();
+        
+      } catch (e) {
+        console.error('LIFF Error:', e);
+      }
+      
+      // Load data
+      await loadCheckins();
+      showLoading(false);
+    }
+    
+    // =====================================================
+    // GOOGLE MAPS
+    // =====================================================
+    function initMap() {
+      map = new google.maps.Map(document.getElementById('map'), {
+        center: { lat: 13.7563, lng: 100.5018 },
+        zoom: 6,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        zoomControl: true,
+        styles: [
+          { featureType: "poi.business", stylers: [{ visibility: "off" }] }
+        ]
+      });
     }
     
     // =====================================================
@@ -340,30 +338,25 @@
       const checkinBtn = document.getElementById('checkinBtn');
       const myCheckinInfo = document.getElementById('myCheckinInfo');
       
-      fetch(CONFIG.GAS_URL + '?action=getCheckins')
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            myCheckin = data.checkins.find(c => c.userId === userProfile.userId);
-            
-            if (myCheckin) {
-              statusEl.textContent = '📍 กำลังแชร์โลที่ ' + myCheckin.placeName;
-              statusEl.className = 'status active';
-              cancelBtn.style.display = 'block';
-              checkinBtn.textContent = '📍 เปลี่ยนที่';
-              
-              myCheckinInfo.style.display = 'block';
-              document.getElementById('myCheckinPlace').textContent = '📍 ' + myCheckin.placeName;
-              document.getElementById('myCheckinTime').textContent = '⏰ หมดอายุใน ' + getTimeLeft(new Date(myCheckin.expireAt));
-            } else {
-              statusEl.textContent = '⚪ ยังไม่ได้แชร์โล';
-              statusEl.className = 'status inactive';
-              cancelBtn.style.display = 'none';
-              checkinBtn.textContent = '📍 แชร์โลของฉัน';
-              myCheckinInfo.style.display = 'none';
-            }
-          }
-        });
+      // Find my checkin from loaded data
+      myCheckin = allCheckins.find(c => c.userId === userProfile.userId);
+      
+      if (myCheckin) {
+        statusEl.textContent = '📍 ' + myCheckin.placeName;
+        statusEl.className = 'status active';
+        cancelBtn.style.display = 'block';
+        checkinBtn.textContent = '📍 เปลี่ยนที่';
+        
+        myCheckinInfo.style.display = 'block';
+        document.getElementById('myCheckinPlace').textContent = '📍 ' + myCheckin.placeName;
+        document.getElementById('myCheckinTime').textContent = '⏰ หมดอายุใน ' + getTimeLeft(new Date(myCheckin.expireAt));
+      } else {
+        statusEl.textContent = '⚪ ยังไม่ได้แชร์โล';
+        statusEl.className = 'status inactive';
+        cancelBtn.style.display = 'none';
+        checkinBtn.textContent = '📍 แชร์โลของฉัน';
+        myCheckinInfo.style.display = 'none';
+      }
     }
     
     // =====================================================
@@ -386,9 +379,11 @@
     }
     
     function displayCheckins(checkins) {
-      // Clear old overlays
-      overlays.forEach(o => o.setMap(null));
-      overlays = [];
+      // Clear old markers
+      markers.forEach(m => m.setMap(null));
+      markers = [];
+      
+      if (checkins.length === 0) return;
       
       const bounds = new google.maps.LatLngBounds();
       
@@ -396,21 +391,25 @@
         const isMe = userProfile && c.userId === userProfile.userId;
         const position = new google.maps.LatLng(c.lat, c.lng);
         
-        // Add pictureUrl (use LINE profile pic for own, placeholder for others)
-        c.pictureUrl = isMe && userProfile ? userProfile.pictureUrl : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(c.nickname) + '&background=DC143C&color=fff';
+        // Set picture URL
+        if (isMe && userProfile && userProfile.pictureUrl) {
+          c.pictureUrl = userProfile.pictureUrl;
+        } else {
+          c.pictureUrl = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(c.nickname) + '&background=DC143C&color=fff&size=100';
+        }
         
         const overlay = new ProfileMarker(position, c, isMe);
         overlay.setMap(map);
-        overlays.push(overlay);
+        markers.push(overlay);
         
         bounds.extend(position);
       });
       
-      if (checkins.length > 0) {
-        map.fitBounds(bounds);
-        if (checkins.length === 1) {
-          map.setZoom(15);
-        }
+      map.fitBounds(bounds);
+      
+      // Zoom out a bit if only 1 marker
+      if (checkins.length === 1) {
+        setTimeout(() => map.setZoom(15), 100);
       }
     }
     
@@ -584,11 +583,8 @@
       setTimeout(() => t.classList.remove('show'), 3000);
     }
     
-    // Start LIFF first
+    // Start when page loads
     document.addEventListener('DOMContentLoaded', init);
   </script>
-  
-  <!-- Google Maps -->
-  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDTS-AxrXpfxj7-14GjX0Asi3QhdYxg7ao&callback=initMap"></script>
 </body>
 </html>
