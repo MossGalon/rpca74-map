@@ -62,7 +62,7 @@
         .modal { background: #1a1a2e; width: 100%; max-width: 500px; border-radius: 20px 20px 0 0; padding: 20px; max-height: 85vh; overflow-y: auto; }
         .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
         .modal-header h2 { font-size: 20px; }
-        .modal-close { background: #333; border: none; color: #fff; width: 36px; height: 36px; border-radius: 50%; font-size: 20px; }
+        .modal-close { background: #333; border: none; color: #fff; width: 36px; height: 36px; border-radius: 50%; font-size: 20px; cursor: pointer; }
 
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; margin-bottom: 8px; font-size: 14px; color: #aaa; }
@@ -86,7 +86,7 @@
 <body>
     <header class="header">
         <div class="header-top">
-            <h1>📍 Map รวมพล รุ่น 74</h1>
+            <h1>📍 Map รวมพล</h1>
             <span class="count" id="activeCount">0 คน</span>
         </div>
         <div class="profile-bar" id="profileBar" style="display:none;">
@@ -103,30 +103,30 @@
 
     <div class="bottom-actions">
         <button class="btn btn-secondary" onclick="refreshData()">🔄 รีเฟรช</button>
-        <button class="btn btn-primary" id="checkinBtn" onclick="openCheckinModal()">📍 แชร์โลของฉัน</button>
+        <button class="btn btn-primary" id="checkinBtn" onclick="openCheckinModal()">📍 แชร์โล</button>
     </div>
 
     <div class="modal-overlay" id="checkinModal">
         <div class="modal">
             <div class="modal-header">
-                <h2>📍 แชร์ตำแหน่งของคุณ</h2>
+                <h2>📍 แชร์โล</h2>
                 <button class="modal-close" onclick="closeCheckinModal()">✕</button>
             </div>
             <div class="gps-status" id="gpsStatus">
-                <span id="gpsIcon">📡</span>
+                <span>📡</span>
                 <span id="gpsText">กำลังหาตำแหน่ง GPS...</span>
             </div>
             <form onsubmit="submitCheckin(event)">
                 <div class="form-group">
-                    <label>📍 ชื่อสถานที่ / ร้าน *</label>
-                    <input type="text" id="placeName" placeholder="เช่น ร้านเจ๊กเม้ง, หน้าโรงเรียน" required>
+                    <label>📍 ชื่อสถานที่ *</label>
+                    <input type="text" id="placeName" placeholder="เช่น ร้านเหล้าเจ๊กเม้ง, ห้าง Central" required>
                 </div>
                 <div class="form-group">
-                    <label>💬 สถานะ / ข้อความ (ไม่บังคับ)</label>
-                    <textarea id="caption" placeholder="เช่น กินเหล้าอยู่ มาเจอกันได้"></textarea>
+                    <label>💬 สถานะ (ไม่บังคับ)</label>
+                    <textarea id="caption" placeholder="เช่น กินเหล้าอยู่ มาได้เลย"></textarea>
                     <small>⏰ หมุดจะหายอัตโนมัติใน 24 ชั่วโมง</small>
                 </div>
-                <button type="submit" class="btn btn-primary" style="width:100%">✅ แชร์โลเคชั่น</button>
+                <button type="submit" class="btn btn-primary" style="width:100%">✅ แชร์โล</button>
             </form>
         </div>
     </div>
@@ -135,9 +135,12 @@
     <div class="toast" id="toast"></div>
 
     <script>
+        // =====================================================
+        // CONFIG - ใส่ URL ของ GAS ที่ Deploy ใหม่ตรงนี้
+        // =====================================================
         const CONFIG = {
             LIFF_ID: '2008817438-v258p2h9',
-            GAS_URL: 'https://script.google.com/macros/s/AKfycbwg4gQ66uNni4cSauLtN9S0uuBVq-Co0ydTcrVB2mU7aJHy4q9EalBtcpX4V9iPLkFG/exec'
+            GAS_URL: 'ใส่_URL_GAS_ใหม่_ตรงนี้'
         };
 
         let map, markers = [], userProfile = null, currentLat = null, currentLng = null;
@@ -185,7 +188,7 @@
                     div.style.cursor = 'pointer';
                     const color = this.isMe ? '#22c55e' : '#DC143C';
                     const timeAgo = getTimeAgo(this.data.checkinTime);
-                    const caption = this.data.caption ? this.data.caption : '';
+                    const caption = this.data.caption || '';
                     
                     div.innerHTML = `
                         <div style="background:#fff; border:3px solid ${color}; border-radius:12px; padding:6px; min-width:70px; max-width:100px; box-shadow:0 2px 8px rgba(0,0,0,0.4); position:relative;">
@@ -270,18 +273,24 @@
                     
                     if (myPoint) {
                         const timeAgo = getTimeAgo(myPoint.checkinTime);
-                        statusEl.innerHTML = `📍 ${myPoint.placeName} <span style="opacity:0.7">(${timeAgo})</span>`;
+                        let statusText = '📍 ' + myPoint.placeName;
+                        if (myPoint.caption) statusText += ' - "' + myPoint.caption + '"';
+                        statusText += ' (' + timeAgo + ')';
+                        statusEl.textContent = statusText;
                         statusEl.className = 'status active';
                         cancelBtn.style.display = 'block';
                         checkinBtn.textContent = '📍 เปลี่ยนที่';
                     } else {
-                        statusEl.textContent = '⚪ ยังไม่ได้แชร์ตำแหน่ง';
+                        statusEl.textContent = '⚪ ยังไม่ได้แชร์โล';
                         statusEl.className = 'status inactive';
                         cancelBtn.style.display = 'none';
-                        checkinBtn.textContent = '📍 แชร์โลของฉัน';
+                        checkinBtn.textContent = '📍 แชร์โล';
                     }
+                } else {
+                    showToast('โหลดข้อมูลไม่สำเร็จ: ' + (data.error || 'Unknown'));
                 }
             } catch (err) {
+                console.error('Fetch error:', err);
                 showToast('โหลดข้อมูลไม่สำเร็จ');
             }
         }
@@ -293,7 +302,7 @@
 
             checkins.forEach(c => {
                 const pos = new google.maps.LatLng(c.lat, c.lng);
-                const isMe = c.userId === userProfile.userId;
+                const isMe = userProfile && c.userId === userProfile.userId;
                 const marker = new ProfileMarkerClass(pos, c, isMe);
                 marker.setMap(map);
                 markers.push(marker);
@@ -316,11 +325,11 @@
                     currentLat = p.coords.latitude;
                     currentLng = p.coords.longitude;
                     document.getElementById('gpsStatus').className = 'gps-status success';
-                    document.getElementById('gpsText').textContent = '✅ ล็อคพิกัด GPS สำเร็จ';
+                    document.getElementById('gpsText').textContent = '✅ พบตำแหน่งแล้ว';
                 },
                 e => {
                     document.getElementById('gpsStatus').className = 'gps-status error';
-                    document.getElementById('gpsText').textContent = '❌ โปรดอนุญาต GPS และเปิด Location';
+                    document.getElementById('gpsText').textContent = '❌ โปรดอนุญาต GPS';
                 },
                 { enableHighAccuracy: true }
             );
@@ -348,19 +357,22 @@
                         lng: currentLng,
                         placeName: document.getElementById('placeName').value,
                         caption: document.getElementById('caption').value,
-                        expireHours: 24  // Fixed 24 hours
+                        expireHours: 24
                     })
                 });
                 const data = await res.json();
                 if (data.success) {
-                    showToast('✅ แชร์พิกัดสำเร็จ!');
+                    showToast('✅ แชร์โลสำเร็จ!');
                     closeCheckinModal();
                     document.getElementById('placeName').value = '';
                     document.getElementById('caption').value = '';
                     await refreshData();
+                } else {
+                    showToast('❌ ' + (data.error || 'เกิดข้อผิดพลาด'));
                 }
             } catch (err) { 
-                showToast('เกิดข้อผิดพลาดในการส่งข้อมูล'); 
+                console.error('Submit error:', err);
+                showToast('เกิดข้อผิดพลาด'); 
             }
             showLoading(false);
         }
