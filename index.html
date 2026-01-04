@@ -9,35 +9,58 @@
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1a1a2e;color:#fff;min-height:100vh}
-    .header{background:linear-gradient(135deg,#8B0000,#DC143C);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:0;right:0;z-index:1000;box-shadow:0 2px 10px rgba(0,0,0,0.3)}
+    
+    /* Header with Profile */
+    .header{background:linear-gradient(135deg,#8B0000,#DC143C);padding:10px 16px;position:fixed;top:0;left:0;right:0;z-index:1000;box-shadow:0 2px 10px rgba(0,0,0,0.3)}
+    .header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
     .header h1{font-size:18px;display:flex;align-items:center;gap:8px}
     .header .count{background:rgba(255,255,255,0.2);padding:4px 10px;border-radius:20px;font-size:13px}
-    #map{position:fixed;top:52px;bottom:70px;left:0;right:0;z-index:1}
+    
+    /* Profile Bar */
+    .profile-bar{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,0.2);padding:8px 12px;border-radius:12px}
+    .profile-bar img{width:36px;height:36px;border-radius:50%;border:2px solid #fff}
+    .profile-bar .info{flex:1}
+    .profile-bar .name{font-size:14px;font-weight:600}
+    .profile-bar .status{font-size:11px;opacity:0.9}
+    .profile-bar .status.active{color:#4ade80}
+    .profile-bar .status.inactive{color:#fbbf24}
+    .profile-bar .cancel-btn{background:rgba(255,255,255,0.2);border:none;color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer}
+    .profile-bar .cancel-btn:active{background:rgba(255,255,255,0.3)}
+    
+    #map{position:fixed;top:110px;bottom:70px;left:0;right:0;z-index:1}
+    
     .bottom-actions{position:fixed;bottom:0;left:0;right:0;background:#1a1a2e;padding:12px 16px;display:flex;gap:10px;z-index:1000;border-top:1px solid #333}
     .btn{flex:1;padding:14px;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform 0.2s}
     .btn:active{transform:scale(0.96)}
     .btn-primary{background:linear-gradient(135deg,#DC143C,#8B0000);color:#fff}
     .btn-secondary{background:#333;color:#fff}
+    .btn-danger{background:#ef4444;color:#fff}
+    .btn:disabled{opacity:0.5;cursor:not-allowed}
+    
     .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:2000;align-items:flex-end;justify-content:center}
     .modal-overlay.active{display:flex}
     .modal{background:#1a1a2e;width:100%;max-width:500px;border-radius:20px 20px 0 0;padding:20px;max-height:85vh;overflow-y:auto}
     .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
     .modal-header h2{font-size:20px;display:flex;align-items:center;gap:8px}
     .modal-close{background:#333;border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer}
+    
     .form-group{margin-bottom:16px}
     .form-group label{display:block;margin-bottom:8px;font-size:14px;color:#aaa}
     .form-group input,.form-group textarea{width:100%;padding:14px;border:1px solid #333;border-radius:12px;background:#0d0d1a;color:#fff;font-size:16px}
     .form-group input:focus,.form-group textarea:focus{outline:none;border-color:#DC143C}
     .form-group textarea{resize:none;height:80px}
+    
     .expire-options{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
     .expire-option{padding:12px 8px;background:#0d0d1a;border:2px solid #333;border-radius:12px;text-align:center;cursor:pointer;transition:all 0.2s}
     .expire-option.selected{border-color:#DC143C;background:rgba(220,20,60,0.1)}
     .expire-option .icon{font-size:24px;margin-bottom:4px}
     .expire-option .label{font-size:12px;color:#aaa}
+    
     .gps-status{background:#0d0d1a;padding:12px;border-radius:12px;display:flex;align-items:center;gap:10px;margin-bottom:16px}
     .gps-status.success{border:1px solid #22c55e}
     .gps-status.loading{border:1px solid #f59e0b}
     .gps-status.error{border:1px solid #ef4444}
+    
     .popup-content{min-width:200px}
     .popup-content h3{font-size:16px;margin-bottom:4px;color:#1a1a2e}
     .popup-content .unit{font-size:12px;color:#666;margin-bottom:8px}
@@ -45,33 +68,49 @@
     .popup-content .caption{font-size:13px;color:#333;font-style:italic;margin-bottom:8px}
     .popup-content .time{font-size:11px;color:#999}
     .popup-content .nav-btn{display:block;width:100%;margin-top:10px;padding:8px;background:#DC143C;color:#fff;text-align:center;text-decoration:none;border-radius:8px;font-size:13px}
+    
     .loading-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:3000;align-items:center;justify-content:center;flex-direction:column;gap:16px}
     .loading-overlay.active{display:flex}
     .spinner{width:50px;height:50px;border:4px solid #333;border-top-color:#DC143C;border-radius:50%;animation:spin 1s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
+    
     .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(100px);background:#333;color:#fff;padding:12px 24px;border-radius:30px;font-size:14px;z-index:2500;opacity:0;transition:all 0.3s}
     .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
     .toast.success{background:#22c55e}
     .toast.error{background:#ef4444}
-    .user-info{background:#0d0d1a;padding:12px;border-radius:12px;margin-bottom:16px;display:flex;align-items:center;gap:12px}
-    .user-info img{width:40px;height:40px;border-radius:50%}
-    .user-info .name{font-weight:600}
-    .user-info .status{font-size:12px;color:#22c55e}
+    
+    /* My Checkin Info */
+    .my-checkin-info{background:#0d0d1a;padding:12px;border-radius:12px;margin-bottom:16px;border:1px solid #22c55e}
+    .my-checkin-info .place{font-weight:600;color:#22c55e;margin-bottom:4px}
+    .my-checkin-info .time{font-size:12px;color:#aaa}
   </style>
 </head>
 <body>
+  <!-- Header with Profile -->
   <header class="header">
-    <h1>📍 Map รวมพล</h1>
-    <span class="count" id="activeCount">0 คน</span>
+    <div class="header-top">
+      <h1>📍 Map รวมพล</h1>
+      <span class="count" id="activeCount">0 คน</span>
+    </div>
+    <div class="profile-bar" id="profileBar" style="display:none;">
+      <img id="profilePic" src="" alt="">
+      <div class="info">
+        <div class="name" id="profileName">-</div>
+        <div class="status" id="profileStatus">กำลังโหลด...</div>
+      </div>
+      <button class="cancel-btn" id="cancelBtn" style="display:none;" onclick="cancelCheckin()">❌ ยกเลิกหมุด</button>
+    </div>
   </header>
   
   <div id="map"></div>
   
+  <!-- Bottom Actions -->
   <div class="bottom-actions">
     <button class="btn btn-secondary" onclick="refreshMap()">🔄 รีเฟรช</button>
-    <button class="btn btn-primary" onclick="openCheckinModal()">📍 แชร์โลของฉัน</button>
+    <button class="btn btn-primary" id="checkinBtn" onclick="openCheckinModal()">📍 แชร์โลของฉัน</button>
   </div>
   
+  <!-- Check-in Modal -->
   <div class="modal-overlay" id="checkinModal">
     <div class="modal">
       <div class="modal-header">
@@ -79,13 +118,11 @@
         <button class="modal-close" onclick="closeCheckinModal()">✕</button>
       </div>
       
-      <!-- User Info -->
-      <div class="user-info" id="userInfo" style="display:none;">
-        <img id="userPic" src="" alt="">
-        <div>
-          <div class="name" id="userName">-</div>
-          <div class="status">✅ เข้าสู่ระบบแล้ว</div>
-        </div>
+      <!-- My Current Checkin (if exists) -->
+      <div class="my-checkin-info" id="myCheckinInfo" style="display:none;">
+        <div class="place" id="myCheckinPlace">📍 -</div>
+        <div class="time" id="myCheckinTime">⏰ -</div>
+        <button class="btn btn-danger" style="width:100%;margin-top:10px;" onclick="cancelCheckin()">❌ ยกเลิกหมุดเดิม</button>
       </div>
       
       <div class="gps-status loading" id="gpsStatus">
@@ -111,7 +148,7 @@
             <div class="expire-option" data-hours="24" onclick="selectExpire(this)"><div class="icon">📍</div><div class="label">24 ชม.</div></div>
           </div>
         </div>
-        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:10px;">✅ แชร์โล</button>
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:10px;" id="submitBtn">✅ แชร์โล</button>
       </form>
     </div>
   </div>
@@ -122,50 +159,103 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     // =====================================================
-    // CONFIG - แก้ไขตรงนี้!
+    // CONFIG
     // =====================================================
     const CONFIG = {
       LIFF_ID: '2008817438-v258p2h9',
       GAS_URL: 'https://script.google.com/macros/s/AKfycbwg4gQ66uNni4cSauLtN9S0uuBVq-Co0ydTcrVB2mU7aJHy4q9EalBtcpX4V9iPLkFG/exec'
     };
-    // =====================================================
     
     let map, markers = [], userProfile = null, currentLat = null, currentLng = null, selectedExpireHours = 6;
+    let allCheckins = [];
+    let myCheckin = null;
     
-    // Initialize
+    // =====================================================
+    // INIT
+    // =====================================================
     async function init() {
       showLoading(true);
       
       try {
-        // Init LIFF
         await liff.init({ liffId: CONFIG.LIFF_ID });
-        console.log('LIFF initialized');
         
-        // Check login
         if (!liff.isLoggedIn()) {
-          console.log('Not logged in, redirecting...');
           liff.login();
           return;
         }
         
-        // Get profile
         userProfile = await liff.getProfile();
-        console.log('User:', userProfile.displayName);
+        showProfile();
         
       } catch (e) {
         console.error('LIFF Error:', e);
         showToast('LIFF Error: ' + e.message, 'error');
       }
       
-      // Init map
       initMap();
-      
-      // Load checkins
       await loadCheckins();
-      
       showLoading(false);
     }
     
+    // =====================================================
+    // PROFILE
+    // =====================================================
+    function showProfile() {
+      if (!userProfile) return;
+      
+      document.getElementById('profileBar').style.display = 'flex';
+      document.getElementById('profilePic').src = userProfile.pictureUrl || '';
+      document.getElementById('profileName').textContent = userProfile.displayName;
+      
+      updateMyStatus();
+    }
+    
+    function updateMyStatus() {
+      if (!userProfile || !allCheckins) return;
+      
+      // Find my checkin
+      myCheckin = allCheckins.find(c => c.id && allCheckins.some(x => x.userId === userProfile.userId)) || null;
+      
+      // Actually find by checking the raw data - need to search by matching
+      myCheckin = null;
+      
+      const statusEl = document.getElementById('profileStatus');
+      const cancelBtn = document.getElementById('cancelBtn');
+      const checkinBtn = document.getElementById('checkinBtn');
+      const myCheckinInfo = document.getElementById('myCheckinInfo');
+      
+      // Check if user has active checkin by fetching again or checking local
+      fetch(CONFIG.GAS_URL + '?action=getCheckins')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            // Find my checkin by userId
+            myCheckin = data.checkins.find(c => c.userId === userProfile.userId);
+            
+            if (myCheckin) {
+              statusEl.textContent = '📍 กำลังแชร์โลที่ ' + myCheckin.placeName;
+              statusEl.className = 'status active';
+              cancelBtn.style.display = 'block';
+              checkinBtn.textContent = '📍 เปลี่ยนที่';
+              
+              // Update modal info
+              myCheckinInfo.style.display = 'block';
+              document.getElementById('myCheckinPlace').textContent = '📍 ' + myCheckin.placeName;
+              document.getElementById('myCheckinTime').textContent = '⏰ หมดอายุใน ' + getTimeLeft(new Date(myCheckin.expireAt));
+            } else {
+              statusEl.textContent = '⚪ ยังไม่ได้แชร์โล';
+              statusEl.className = 'status inactive';
+              cancelBtn.style.display = 'none';
+              checkinBtn.textContent = '📍 แชร์โลของฉัน';
+              myCheckinInfo.style.display = 'none';
+            }
+          }
+        });
+    }
+    
+    // =====================================================
+    // MAP
+    // =====================================================
     function initMap() {
       map = L.map('map').setView([13.7563, 100.5018], 6);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -179,8 +269,10 @@
         const data = await res.json();
         
         if (data.success) {
+          allCheckins = data.checkins;
           displayCheckins(data.checkins);
           document.getElementById('activeCount').textContent = data.checkins.length + ' คน';
+          updateMyStatus();
         }
       } catch (e) {
         console.error('Load error:', e);
@@ -188,38 +280,36 @@
     }
     
     function displayCheckins(checkins) {
-      // Clear markers
       markers.forEach(m => map.removeLayer(m));
       markers = [];
       
-      // Icon
-      const icon = L.divIcon({
-        className: 'custom-marker',
-        html: '<div style="background:linear-gradient(135deg,#DC143C,#8B0000);width:36px;height:36px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;"><span style="transform:rotate(45deg);font-size:16px;">📍</span></div>',
-        iconSize: [36, 36],
-        iconAnchor: [18, 36],
-        popupAnchor: [0, -36]
-      });
-      
-      // Add markers
       checkins.forEach(c => {
+        const isMe = userProfile && c.nickname === userProfile.displayName;
+        
+        const icon = L.divIcon({
+          className: 'custom-marker',
+          html: `<div style="background:linear-gradient(135deg,${isMe ? '#22c55e' : '#DC143C'},${isMe ? '#16a34a' : '#8B0000'});width:36px;height:36px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;"><span style="transform:rotate(45deg);font-size:16px;">${isMe ? '⭐' : '📍'}</span></div>`,
+          iconSize: [36, 36],
+          iconAnchor: [18, 36],
+          popupAnchor: [0, -36]
+        });
+        
         const m = L.marker([c.lat, c.lng], { icon })
           .addTo(map)
-          .bindPopup(createPopup(c));
+          .bindPopup(createPopup(c, isMe));
         markers.push(m);
       });
       
-      // Fit bounds
       if (markers.length > 0) {
         map.fitBounds(L.featureGroup(markers).getBounds().pad(0.1));
       }
     }
     
-    function createPopup(c) {
+    function createPopup(c, isMe) {
       const timeLeft = getTimeLeft(new Date(c.expireAt));
       return `
         <div class="popup-content">
-          <h3>${c.nickname}</h3>
+          <h3>${isMe ? '⭐ ' : ''}${c.nickname}</h3>
           <div class="unit">${c.unit}</div>
           <div class="place">📍 ${c.placeName}</div>
           ${c.caption ? `<div class="caption">"${c.caption}"</div>` : ''}
@@ -237,16 +327,11 @@
       return h > 0 ? h + ' ชม. ' + m + ' นาที' : m + ' นาที';
     }
     
+    // =====================================================
+    // CHECK-IN
+    // =====================================================
     function openCheckinModal() {
       document.getElementById('checkinModal').classList.add('active');
-      
-      // Show user info
-      if (userProfile) {
-        document.getElementById('userInfo').style.display = 'flex';
-        document.getElementById('userPic').src = userProfile.pictureUrl || '';
-        document.getElementById('userName').textContent = userProfile.displayName;
-      }
-      
       getCurrentLocation();
     }
     
@@ -317,8 +402,8 @@
           body: new URLSearchParams({
             action: 'addCheckin',
             userId: userProfile.userId,
-            nickname: userProfile.displayName,  // ส่งชื่อจาก LINE
-            unit: 'รุ่น 74',                     // ใช้ default
+            nickname: userProfile.displayName,
+            unit: 'รุ่น 74',
             lat: currentLat,
             lng: currentLng,
             placeName: placeName,
@@ -346,6 +431,45 @@
       showLoading(false);
     }
     
+    // =====================================================
+    // CANCEL CHECK-IN
+    // =====================================================
+    async function cancelCheckin() {
+      if (!userProfile) return;
+      
+      if (!confirm('ยืนยันยกเลิกหมุด?')) return;
+      
+      showLoading(true);
+      
+      try {
+        const res = await fetch(CONFIG.GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            action: 'deleteCheckin',
+            userId: userProfile.userId
+          })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          showToast('✅ ยกเลิกหมุดแล้ว', 'success');
+          closeCheckinModal();
+          await loadCheckins();
+        } else {
+          showToast('❌ ' + (data.error || 'เกิดข้อผิดพลาด'), 'error');
+        }
+      } catch (err) {
+        showToast('❌ ' + err.message, 'error');
+      }
+      
+      showLoading(false);
+    }
+    
+    // =====================================================
+    // UTILITIES
+    // =====================================================
     function refreshMap() {
       showLoading(true);
       loadCheckins().then(() => {
