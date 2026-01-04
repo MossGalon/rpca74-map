@@ -41,6 +41,7 @@
             flex-grow: 1;
             width: 100%;
             background: #0d0d1a;
+            position: relative;
         }
 
         .bottom-actions { 
@@ -81,6 +82,36 @@
         .gps-status { background: #0d0d1a; padding: 12px; border-radius: 12px; display: flex; align-items: center; gap: 10px; margin-bottom: 16px; border: 1px solid #333; }
         .gps-status.success { border-color: #22c55e; }
         .gps-status.error { border-color: #ef4444; }
+
+        .info-tip { 
+            position: absolute; 
+            top: 10px; 
+            left: 10px; 
+            right: 10px; 
+            background: rgba(139, 0, 0, 0.95); 
+            color: #fff; 
+            padding: 12px 16px; 
+            border-radius: 12px; 
+            font-size: 13px; 
+            z-index: 500; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .info-tip .icon { font-size: 20px; }
+        .info-tip .text { flex: 1; line-height: 1.5; }
+        .info-tip .close-tip { 
+            background: rgba(255,255,255,0.2); 
+            border: none; 
+            color: #fff; 
+            width: 24px; 
+            height: 24px; 
+            border-radius: 50%; 
+            cursor: pointer; 
+            font-size: 14px;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body>
@@ -99,14 +130,19 @@
         </div>
     </header>
 
-    <div id="map"></div>
+    <div id="map">
+        <div class="info-tip" id="infoTip">
+            <span class="icon">💡</span>
+            <span class="text">แชร์โลเคชั่นชวนเพื่อนๆ มา Meeting หรือกินเหล้า! เพื่อนทุกคนจะเห็นตำแหน่งของคุณบนแผนที่</span>
+            <button class="close-tip" onclick="closeTip()">✕</button>
+        </div>
+    </div>
 
     <div class="bottom-actions">
         <button class="btn btn-secondary" onclick="refreshMap()">🔄 รีเฟรช</button>
         <button class="btn btn-primary" id="checkinBtn" onclick="openCheckinModal()">📍 แชร์โล</button>
     </div>
 
-    <!-- Modal - ไม่มีตัวเลือกเวลา -->
     <div class="modal-overlay" id="checkinModal">
         <div class="modal">
             <div class="modal-header">
@@ -132,7 +168,7 @@
         </div>
     </div>
 
-    <div class="loading-overlay active" id="loadingOverlay"><div class="spinner"></div><span style="margin-top:10px">กำลังเตรียมแผนที่...</span></div>
+    <div class="loading-overlay active" id="loadingOverlay"><div class="spinner"></div><span>กำลังเตรียมแผนที่...</span></div>
     <div class="toast" id="toast"></div>
 
     <script>
@@ -144,7 +180,6 @@
         let map, markers = [], userProfile = null, currentLat = null, currentLng = null;
         let ProfileMarkerClass = null;
 
-        // คำนวณเวลาที่ผ่านไป
         function getTimeAgo(timestamp) {
             if (!timestamp) return '';
             const now = new Date();
@@ -160,10 +195,9 @@
         }
 
         function initMap() {
-            console.log('Google Maps Callback Triggered');
-            const mapContainer = document.getElementById('map');
+            console.log('--- Google Maps Initialize ---');
             
-            map = new google.maps.Map(mapContainer, {
+            map = new google.maps.Map(document.getElementById('map'), {
                 center: { lat: 13.7563, lng: 100.5018 },
                 zoom: 6,
                 mapTypeControl: false,
@@ -173,7 +207,6 @@
                 styles: [{ featureType: "poi.business", stylers: [{ visibility: "off" }] }]
             });
 
-            // Custom Overlay - แสดง status และเวลา
             ProfileMarkerClass = class extends google.maps.OverlayView {
                 constructor(pos, data, isMe) {
                     super();
@@ -225,21 +258,17 @@
                     <span style="color:#DC143C; font-weight:bold;">📍 ${data.placeName}</span><br>
                     ${data.caption ? `<small>"${data.caption}"</small><br>` : ''}
                     ${timeAgo ? `<small style="color:#999;">🕐 ${timeAgo}</small><br>` : ''}
-                    <hr style="margin:5px 0">
                     <a href="https://www.google.com/maps/dir/?api=1&destination=${data.lat},${data.lng}" target="_blank" style="display:block; background:#DC143C; color:#fff; text-align:center; padding:8px; border-radius:5px; text-decoration:none; margin-top:5px;">🚗 นำทางไปหา</a>
                 </div>
             `;
-            const iw = new google.maps.InfoWindow({ content, position: pos });
-            iw.open(map);
+            new google.maps.InfoWindow({ content, position: pos }).open(map);
         }
 
         async function initLIFF() {
             try {
                 await liff.init({ liffId: CONFIG.LIFF_ID });
-                if (!liff.isLoggedIn()) {
-                    liff.login();
-                    return;
-                }
+                if (!liff.isLoggedIn()) { liff.login(); return; }
+                
                 userProfile = await liff.getProfile();
                 document.getElementById('profileBar').style.display = 'flex';
                 document.getElementById('profilePic').src = userProfile.pictureUrl;
@@ -257,6 +286,8 @@
             try {
                 const res = await fetch(CONFIG.GAS_URL + '?action=getCheckins');
                 const data = await res.json();
+                console.log('[Data] Found', data.checkins?.length || 0, 'checkins');
+                
                 if (data.success) {
                     renderMarkers(data.checkins);
                     document.getElementById('activeCount').textContent = data.checkins.length + ' คน';
@@ -283,6 +314,7 @@
                     }
                 }
             } catch (err) {
+                console.error('Fetch error:', err);
                 showToast('โหลดข้อมูลไม่สำเร็จ');
             }
         }
@@ -380,6 +412,17 @@
             t.textContent = m;
             t.classList.add('show');
             setTimeout(() => t.classList.remove('show'), 3000);
+        }
+        function closeTip() {
+            document.getElementById('infoTip').style.display = 'none';
+            localStorage.setItem('tipClosed', 'true');
+        }
+        // ตรวจสอบว่าเคยปิด tip แล้วหรือยัง
+        if (localStorage.getItem('tipClosed')) {
+            document.addEventListener('DOMContentLoaded', () => {
+                const tip = document.getElementById('infoTip');
+                if (tip) tip.style.display = 'none';
+            });
         }
     </script>
 
