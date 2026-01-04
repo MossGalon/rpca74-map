@@ -7,7 +7,8 @@
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1a1a2e;color:#fff;min-height:100vh}
+    html,body{height:100%;width:100%}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1a1a2e;color:#fff}
     
     .header{background:linear-gradient(135deg,#8B0000,#DC143C);padding:10px 16px;position:fixed;top:0;left:0;right:0;z-index:1000;box-shadow:0 2px 10px rgba(0,0,0,0.3)}
     .header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
@@ -23,7 +24,17 @@
     .profile-bar .status.inactive{color:#fbbf24}
     .profile-bar .cancel-btn{background:rgba(255,255,255,0.2);border:none;color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer}
     
-    #map{position:fixed;top:110px;bottom:70px;left:0;right:0;z-index:1}
+    #map{
+      position:absolute;
+      top:110px;
+      bottom:70px;
+      left:0;
+      right:0;
+      width:100%;
+      height:calc(100% - 180px);
+      z-index:1;
+      background:#e5e3df;
+    }
     
     .bottom-actions{position:fixed;bottom:0;left:0;right:0;background:#1a1a2e;padding:12px 16px;display:flex;gap:10px;z-index:1000;border-top:1px solid #333}
     .btn{flex:1;padding:14px;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform 0.2s}
@@ -150,28 +161,38 @@
     let map, markers = [], userProfile = null, currentLat = null, currentLng = null, selectedExpireHours = 6;
     let allCheckins = [];
     let myCheckin = null;
-    let ProfileMarker = null; // Will be defined after Google Maps loads
+    let ProfileMarker = null;
     
     // =====================================================
-    // GOOGLE MAPS CALLBACK - This runs when Maps is ready
+    // GOOGLE MAPS CALLBACK
     // =====================================================
     function initMap() {
       console.log('Google Maps loaded!');
       
+      const mapEl = document.getElementById('map');
+      console.log('Map element:', mapEl);
+      console.log('Map element size:', mapEl.offsetWidth, 'x', mapEl.offsetHeight);
+      
       // Create map
-      map = new google.maps.Map(document.getElementById('map'), {
+      map = new google.maps.Map(mapEl, {
         center: { lat: 13.7563, lng: 100.5018 },
-        zoom: 6,
+        zoom: 10,
         mapTypeControl: false,
         streetViewControl: false,
         fullscreenControl: false,
-        zoomControl: true,
-        styles: [
-          { featureType: "poi.business", stylers: [{ visibility: "off" }] }
-        ]
+        zoomControl: true
       });
       
-      // Define ProfileMarker class AFTER Google Maps is loaded
+      console.log('Map created:', map);
+      
+      // Force resize after a short delay
+      setTimeout(function() {
+        google.maps.event.trigger(map, 'resize');
+        map.setCenter({ lat: 13.7563, lng: 100.5018 });
+        console.log('Map resized');
+      }, 500);
+      
+      // Define ProfileMarker class
       ProfileMarker = class extends google.maps.OverlayView {
         constructor(position, data, isMe) {
           super();
@@ -241,7 +262,6 @@
             </div>
           `;
           
-          // Click event
           this.div.addEventListener('click', () => {
             const infoWindow = new google.maps.InfoWindow({
               content: `
@@ -285,7 +305,7 @@
         }
       };
       
-      // Now init LIFF and load data
+      // Now init LIFF
       initLIFF();
     }
     
@@ -308,7 +328,6 @@
         console.error('LIFF Error:', e);
       }
       
-      // Load data
       await loadCheckins();
       showLoading(false);
     }
@@ -374,7 +393,6 @@
     }
     
     function displayCheckins(checkins) {
-      // Clear old markers
       markers.forEach(m => m.setMap(null));
       markers = [];
       
@@ -386,7 +404,6 @@
         const isMe = userProfile && c.userId === userProfile.userId;
         const position = new google.maps.LatLng(c.lat, c.lng);
         
-        // Set picture URL
         if (isMe && userProfile && userProfile.pictureUrl) {
           c.pictureUrl = userProfile.pictureUrl;
         } else {
@@ -578,7 +595,6 @@
     }
   </script>
   
-  <!-- Google Maps - loads last and calls initMap when ready -->
   <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDTS-AxrXpfxj7-14GjX0Asi3QhdYxg7ao&callback=initMap"></script>
 </body>
 </html>
