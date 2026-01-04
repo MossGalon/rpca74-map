@@ -1,600 +1,380 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>📍 Map รวมพล รุ่น 74</title>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    html,body{height:100%;width:100%}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1a1a2e;color:#fff}
-    
-    .header{background:linear-gradient(135deg,#8B0000,#DC143C);padding:10px 16px;position:fixed;top:0;left:0;right:0;z-index:1000;box-shadow:0 2px 10px rgba(0,0,0,0.3)}
-    .header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .header h1{font-size:18px;display:flex;align-items:center;gap:8px}
-    .header .count{background:rgba(255,255,255,0.2);padding:4px 10px;border-radius:20px;font-size:13px}
-    
-    .profile-bar{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,0.2);padding:8px 12px;border-radius:12px}
-    .profile-bar img{width:36px;height:36px;border-radius:50%;border:2px solid #fff}
-    .profile-bar .info{flex:1}
-    .profile-bar .name{font-size:14px;font-weight:600}
-    .profile-bar .status{font-size:11px;opacity:0.9}
-    .profile-bar .status.active{color:#4ade80}
-    .profile-bar .status.inactive{color:#fbbf24}
-    .profile-bar .cancel-btn{background:rgba(255,255,255,0.2);border:none;color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer}
-    
-    #map{
-      position:absolute;
-      top:110px;
-      bottom:70px;
-      left:0;
-      right:0;
-      width:100%;
-      height:calc(100% - 180px);
-      z-index:1;
-      background:#e5e3df;
-    }
-    
-    .bottom-actions{position:fixed;bottom:0;left:0;right:0;background:#1a1a2e;padding:12px 16px;display:flex;gap:10px;z-index:1000;border-top:1px solid #333}
-    .btn{flex:1;padding:14px;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform 0.2s}
-    .btn:active{transform:scale(0.96)}
-    .btn-primary{background:linear-gradient(135deg,#DC143C,#8B0000);color:#fff}
-    .btn-secondary{background:#333;color:#fff}
-    .btn-danger{background:#ef4444;color:#fff}
-    
-    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:2000;align-items:flex-end;justify-content:center}
-    .modal-overlay.active{display:flex}
-    .modal{background:#1a1a2e;width:100%;max-width:500px;border-radius:20px 20px 0 0;padding:20px;max-height:85vh;overflow-y:auto}
-    .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
-    .modal-header h2{font-size:20px;display:flex;align-items:center;gap:8px}
-    .modal-close{background:#333;border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer}
-    
-    .form-group{margin-bottom:16px}
-    .form-group label{display:block;margin-bottom:8px;font-size:14px;color:#aaa}
-    .form-group input,.form-group textarea{width:100%;padding:14px;border:1px solid #333;border-radius:12px;background:#0d0d1a;color:#fff;font-size:16px}
-    .form-group input:focus,.form-group textarea:focus{outline:none;border-color:#DC143C}
-    .form-group textarea{resize:none;height:80px}
-    
-    .expire-options{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-    .expire-option{padding:12px 8px;background:#0d0d1a;border:2px solid #333;border-radius:12px;text-align:center;cursor:pointer;transition:all 0.2s}
-    .expire-option.selected{border-color:#DC143C;background:rgba(220,20,60,0.1)}
-    .expire-option .icon{font-size:24px;margin-bottom:4px}
-    .expire-option .label{font-size:12px;color:#aaa}
-    
-    .gps-status{background:#0d0d1a;padding:12px;border-radius:12px;display:flex;align-items:center;gap:10px;margin-bottom:16px}
-    .gps-status.success{border:1px solid #22c55e}
-    .gps-status.loading{border:1px solid #f59e0b}
-    .gps-status.error{border:1px solid #ef4444}
-    
-    .loading-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:3000;align-items:center;justify-content:center;flex-direction:column;gap:16px}
-    .loading-overlay.active{display:flex}
-    .spinner{width:50px;height:50px;border:4px solid #333;border-top-color:#DC143C;border-radius:50%;animation:spin 1s linear infinite}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    
-    .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(100px);background:#333;color:#fff;padding:12px 24px;border-radius:30px;font-size:14px;z-index:2500;opacity:0;transition:all 0.3s}
-    .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
-    .toast.success{background:#22c55e}
-    .toast.error{background:#ef4444}
-    
-    .my-checkin-info{background:#0d0d1a;padding:12px;border-radius:12px;margin-bottom:16px;border:1px solid #22c55e}
-    .my-checkin-info .place{font-weight:600;color:#22c55e;margin-bottom:4px}
-    .my-checkin-info .time{font-size:12px;color:#aaa}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>📍 Map รวมพล รุ่น 74</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background: #1a1a2e; 
+            color: #fff; 
+            height: 100vh; 
+            overflow: hidden; /* ป้องกันหน้าจอสั่นเวลารูดแผนที่ */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header Layout */
+        .header { 
+            background: linear-gradient(135deg, #8B0000, #DC143C); 
+            padding: 12px 16px; 
+            z-index: 1000; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            flex-shrink: 0;
+        }
+        .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .header h1 { font-size: 18px; display: flex; align-items: center; gap: 8px; }
+        .header .count { background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; font-size: 13px; }
+
+        .profile-bar { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 12px; }
+        .profile-bar img { width: 36px; height: 36px; border-radius: 50%; border: 2px solid #fff; object-fit: cover; }
+        .profile-bar .info { flex: 1; }
+        .profile-bar .name { font-size: 14px; font-weight: 600; }
+        .profile-bar .status { font-size: 11px; opacity: 0.9; }
+        .profile-bar .status.active { color: #4ade80; }
+        .profile-bar .status.inactive { color: #fbbf24; }
+        .profile-bar .cancel-btn { background: rgba(255,255,255,0.2); border: none; color: #fff; padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+
+        /* Map Container - ปรับให้ใช้ Flex grow */
+        #map { 
+            flex-grow: 1;
+            width: 100%;
+            background: #0d0d1a; /* สีพื้นหลังระหว่างรอโหลด map */
+        }
+
+        .bottom-actions { 
+            background: #1a1a2e; 
+            padding: 12px 16px; 
+            display: flex; 
+            gap: 10px; 
+            z-index: 1000; 
+            border-top: 1px solid #333;
+            padding-bottom: env(safe-area-inset-bottom, 12px); /* รองรับ iPhone X+ */
+        }
+        .btn { flex: 1; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.2s; }
+        .btn:active { transform: scale(0.96); }
+        .btn-primary { background: linear-gradient(135deg, #DC143C, #8B0000); color: #fff; }
+        .btn-secondary { background: #333; color: #fff; }
+        .btn-danger { background: #ef4444; color: #fff; }
+
+        /* Modal & UI Elements */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; align-items: flex-end; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: #1a1a2e; width: 100%; max-width: 500px; border-radius: 20px 20px 0 0; padding: 20px; max-height: 85vh; overflow-y: auto; }
+        .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .modal-header h2 { font-size: 20px; }
+        .modal-close { background: #333; border: none; color: #fff; width: 36px; height: 36px; border-radius: 50%; font-size: 20px; }
+
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 8px; font-size: 14px; color: #aaa; }
+        .form-group input, .form-group textarea { width: 100%; padding: 14px; border: 1px solid #333; border-radius: 12px; background: #0d0d1a; color: #fff; font-size: 16px; }
+        
+        .expire-options { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .expire-option { padding: 12px 8px; background: #0d0d1a; border: 2px solid #333; border-radius: 12px; text-align: center; cursor: pointer; }
+        .expire-option.selected { border-color: #DC143C; background: rgba(220, 20, 60, 0.1); }
+
+        .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 3000; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
+        .loading-overlay.active { display: flex; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top-color: #DC143C; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(100px); background: #333; color: #fff; padding: 12px 24px; border-radius: 30px; font-size: 14px; z-index: 2500; opacity: 0; transition: all 0.3s; pointer-events: none; }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        
+        .gps-status { background: #0d0d1a; padding: 12px; border-radius: 12px; display: flex; align-items: center; gap: 10px; margin-bottom: 16px; border: 1px solid #333; }
+        .gps-status.success { border-color: #22c55e; }
+        .gps-status.error { border-color: #ef4444; }
+    </style>
 </head>
 <body>
-  <header class="header">
-    <div class="header-top">
-      <h1>📍 Map รวมพล</h1>
-      <span class="count" id="activeCount">0 คน</span>
-    </div>
-    <div class="profile-bar" id="profileBar" style="display:none;">
-      <img id="profilePic" src="" alt="">
-      <div class="info">
-        <div class="name" id="profileName">-</div>
-        <div class="status" id="profileStatus">กำลังโหลด...</div>
-      </div>
-      <button class="cancel-btn" id="cancelBtn" style="display:none;" onclick="cancelCheckin()">❌ ยกเลิก</button>
-    </div>
-  </header>
-  
-  <div id="map"></div>
-  
-  <div class="bottom-actions">
-    <button class="btn btn-secondary" onclick="refreshMap()">🔄 รีเฟรช</button>
-    <button class="btn btn-primary" id="checkinBtn" onclick="openCheckinModal()">📍 แชร์โลของฉัน</button>
-  </div>
-  
-  <div class="modal-overlay" id="checkinModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h2>📍 แชร์โล</h2>
-        <button class="modal-close" onclick="closeCheckinModal()">✕</button>
-      </div>
-      
-      <div class="my-checkin-info" id="myCheckinInfo" style="display:none;">
-        <div class="place" id="myCheckinPlace">📍 -</div>
-        <div class="time" id="myCheckinTime">⏰ -</div>
-        <button class="btn btn-danger" style="width:100%;margin-top:10px;" onclick="cancelCheckin()">❌ ยกเลิกหมุดเดิม</button>
-      </div>
-      
-      <div class="gps-status loading" id="gpsStatus">
-        <span>📡</span>
-        <span id="gpsText">กำลังหาตำแหน่ง...</span>
-      </div>
-      
-      <form id="checkinForm" onsubmit="submitCheckin(event)">
-        <div class="form-group">
-          <label>ชื่อสถานที่ *</label>
-          <input type="text" id="placeName" placeholder="เช่น ร้านเหล้าเจ๊กเม้ง, ห้าง Central" required>
+    <header class="header">
+        <div class="header-top">
+            <h1>📍 Map รวมพล รุ่น 74</h1>
+            <span class="count" id="activeCount">0 คน</span>
         </div>
-        <div class="form-group">
-          <label>Caption (ไม่บังคับ)</label>
-          <textarea id="caption" placeholder="เช่น มากินได้เลยพี่น้อง"></textarea>
-        </div>
-        <div class="form-group">
-          <label>หมดอายุใน</label>
-          <div class="expire-options">
-            <div class="expire-option" data-hours="3" onclick="selectExpire(this)"><div class="icon">⚡</div><div class="label">3 ชม.</div></div>
-            <div class="expire-option selected" data-hours="6" onclick="selectExpire(this)"><div class="icon">🍺</div><div class="label">6 ชม.</div></div>
-            <div class="expire-option" data-hours="12" onclick="selectExpire(this)"><div class="icon">🌙</div><div class="label">12 ชม.</div></div>
-            <div class="expire-option" data-hours="24" onclick="selectExpire(this)"><div class="icon">📍</div><div class="label">24 ชม.</div></div>
-          </div>
-        </div>
-        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:10px;" id="submitBtn">✅ แชร์โล</button>
-      </form>
-    </div>
-  </div>
-  
-  <div class="loading-overlay active" id="loadingOverlay"><div class="spinner"></div><span>กำลังโหลด...</span></div>
-  <div class="toast" id="toast"></div>
-  
-  <script>
-    // =====================================================
-    // CONFIG
-    // =====================================================
-    const CONFIG = {
-      LIFF_ID: '2008817438-v258p2h9',
-      GAS_URL: 'https://script.google.com/macros/s/AKfycbwg4gQ66uNni4cSauLtN9S0uuBVq-Co0ydTcrVB2mU7aJHy4q9EalBtcpX4V9iPLkFG/exec'
-    };
-    
-    let map, markers = [], userProfile = null, currentLat = null, currentLng = null, selectedExpireHours = 6;
-    let allCheckins = [];
-    let myCheckin = null;
-    let ProfileMarker = null;
-    
-    // =====================================================
-    // GOOGLE MAPS CALLBACK
-    // =====================================================
-    function initMap() {
-      console.log('Google Maps loaded!');
-      
-      const mapEl = document.getElementById('map');
-      console.log('Map element:', mapEl);
-      console.log('Map element size:', mapEl.offsetWidth, 'x', mapEl.offsetHeight);
-      
-      // Create map
-      map = new google.maps.Map(mapEl, {
-        center: { lat: 13.7563, lng: 100.5018 },
-        zoom: 10,
-        mapTypeControl: false,
-        streetViewControl: false,
-        fullscreenControl: false,
-        zoomControl: true
-      });
-      
-      console.log('Map created:', map);
-      
-      // Force resize after a short delay
-      setTimeout(function() {
-        google.maps.event.trigger(map, 'resize');
-        map.setCenter({ lat: 13.7563, lng: 100.5018 });
-        console.log('Map resized');
-      }, 500);
-      
-      // Define ProfileMarker class
-      ProfileMarker = class extends google.maps.OverlayView {
-        constructor(position, data, isMe) {
-          super();
-          this.position = position;
-          this.data = data;
-          this.isMe = isMe;
-          this.div = null;
-        }
-        
-        onAdd() {
-          this.div = document.createElement('div');
-          this.div.style.position = 'absolute';
-          this.div.style.cursor = 'pointer';
-          this.div.style.zIndex = this.isMe ? '100' : '50';
-          
-          const borderColor = this.isMe ? '#22c55e' : '#DC143C';
-          
-          this.div.innerHTML = `
-            <div style="
-              background: #fff;
-              border-radius: 12px;
-              padding: 8px;
-              box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-              text-align: center;
-              min-width: 80px;
-              border: 3px solid ${borderColor};
-              position: relative;
-            ">
-              <img src="${this.data.pictureUrl}" style="
-                width: 45px;
-                height: 45px;
-                border-radius: 50%;
-                margin-bottom: 4px;
-                border: 2px solid ${borderColor};
-                display: block;
-                margin-left: auto;
-                margin-right: auto;
-              " onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(this.data.nickname)}&background=DC143C&color=fff'">
-              <div style="
-                font-size: 11px;
-                font-weight: bold;
-                color: #333;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                max-width: 75px;
-              ">${this.isMe ? '⭐ ' : ''}${this.data.nickname}</div>
-              <div style="
-                font-size: 10px;
-                color: ${borderColor};
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                max-width: 75px;
-              ">📍 ${this.data.placeName}</div>
-              <div style="
-                position: absolute;
-                bottom: -10px;
-                left: 50%;
-                transform: translateX(-50%);
-                width: 0;
-                height: 0;
-                border-left: 10px solid transparent;
-                border-right: 10px solid transparent;
-                border-top: 10px solid ${borderColor};
-              "></div>
+        <div class="profile-bar" id="profileBar" style="display:none;">
+            <img id="profilePic" src="" alt="Profile">
+            <div class="info">
+                <div class="name" id="profileName">-</div>
+                <div class="status" id="profileStatus">กำลังโหลด...</div>
             </div>
-          `;
-          
-          this.div.addEventListener('click', () => {
-            const infoWindow = new google.maps.InfoWindow({
-              content: `
-                <div style="padding:10px;min-width:200px;">
-                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-                    <img src="${this.data.pictureUrl}" style="width:50px;height:50px;border-radius:50%;" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(this.data.nickname)}&background=DC143C&color=fff'">
-                    <div>
-                      <div style="font-weight:bold;font-size:16px;">${this.isMe ? '⭐ ' : ''}${this.data.nickname}</div>
-                      <div style="color:#666;font-size:12px;">${this.data.unit}</div>
-                    </div>
-                  </div>
-                  <div style="color:#DC143C;font-weight:bold;margin-bottom:5px;">📍 ${this.data.placeName}</div>
-                  ${this.data.caption ? `<div style="color:#666;font-style:italic;margin-bottom:5px;">"${this.data.caption}"</div>` : ''}
-                  <div style="color:#999;font-size:12px;">⏰ หมดอายุใน ${getTimeLeft(new Date(this.data.expireAt))}</div>
-                  <a href="https://www.google.com/maps/dir/?api=1&destination=${this.data.lat},${this.data.lng}" target="_blank" style="display:block;margin-top:10px;padding:8px;background:#DC143C;color:#fff;text-align:center;text-decoration:none;border-radius:8px;">🗺️ นำทาง</a>
+            <button class="cancel-btn" id="cancelBtn" style="display:none;" onclick="cancelCheckin()">❌ ยกเลิกหมุด</button>
+        </div>
+    </header>
+
+    <div id="map"></div>
+
+    <div class="bottom-actions">
+        <button class="btn btn-secondary" onclick="refreshMap()">🔄 รีเฟรช</button>
+        <button class="btn btn-primary" id="checkinBtn" onclick="openCheckinModal()">📍 แชร์โลของฉัน</button>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="checkinModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>📍 แชร์ตำแหน่งของคุณ</h2>
+                <button class="modal-close" onclick="closeCheckinModal()">✕</button>
+            </div>
+            <div class="gps-status" id="gpsStatus">
+                <span id="gpsIcon">📡</span>
+                <span id="gpsText">กำลังหาตำแหน่ง GPS...</span>
+            </div>
+            <form onsubmit="submitCheckin(event)">
+                <div class="form-group">
+                    <label>ระบุชื่อสถานที่ / ร้าน</label>
+                    <input type="text" id="placeName" placeholder="เช่น ร้านเจ๊กเม้ง, หน้าโรงเรียน" required>
                 </div>
-              `,
-              position: this.position
+                <div class="form-group">
+                    <label>ข้อความ (ไม่บังคับ)</label>
+                    <textarea id="caption" placeholder="เช่น มาเจอกันได้ครับ"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>ปักหมุดทิ้งไว้กี่ชั่วโมง?</label>
+                    <div class="expire-options">
+                        <div class="expire-option" data-hours="3" onclick="selectExpire(this)">3ชม.</div>
+                        <div class="expire-option selected" data-hours="6" onclick="selectExpire(this)">6ชม.</div>
+                        <div class="expire-option" data-hours="12" onclick="selectExpire(this)">12ชม.</div>
+                        <div class="expire-option" data-hours="24" onclick="selectExpire(this)">1วัน</div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%">✅ ตกลง แชร์โลเคชั่น</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="loading-overlay active" id="loadingOverlay"><div class="spinner"></div><span style="margin-top:10px">กำลังเตรียมแผนที่...</span></div>
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const CONFIG = {
+            LIFF_ID: '2008817438-v258p2h9',
+            GAS_URL: 'https://script.google.com/macros/s/AKfycbwg4gQ66uNni4cSauLtN9S0uuBVq-Co0ydTcrVB2mU7aJHy4q9EalBtcpX4V9iPLkFG/exec'
+        };
+
+        let map, markers = [], userProfile = null, currentLat = null, currentLng = null, selectedExpireHours = 6;
+        let ProfileMarkerClass = null;
+
+        // 1. Google Maps Initialize
+        function initMap() {
+            console.log('Google Maps Callback Triggered');
+            const mapContainer = document.getElementById('map');
+            
+            map = new google.maps.Map(mapContainer, {
+                center: { lat: 13.7563, lng: 100.5018 },
+                zoom: 6,
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: false,
+                zoomControl: true,
+                styles: [{ featureType: "poi.business", stylers: [{ visibility: "off" }] }]
             });
-            infoWindow.open(map);
-          });
-          
-          const panes = this.getPanes();
-          panes.overlayMouseTarget.appendChild(this.div);
+
+            // Define Custom Overlay
+            ProfileMarkerClass = class extends google.maps.OverlayView {
+                constructor(pos, data, isMe) {
+                    super();
+                    this.pos = pos;
+                    this.data = data;
+                    this.isMe = isMe;
+                }
+                onAdd() {
+                    const div = document.createElement('div');
+                    div.style.position = 'absolute';
+                    div.style.cursor = 'pointer';
+                    const color = this.isMe ? '#22c55e' : '#DC143C';
+                    div.innerHTML = `
+                        <div style="background:#fff; border:3px solid ${color}; border-radius:12px; padding:5px; width:60px; box-shadow:0 2px 5px rgba(0,0,0,0.5); position:relative;">
+                            <img src="${this.data.pictureUrl}" style="width:100%; border-radius:8px; display:block;" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(this.data.nickname)}'">
+                            <div style="font-size:10px; color:#333; font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center; margin-top:2px;">${this.data.nickname}</div>
+                            <div style="position:absolute; bottom:-10px; left:50%; transform:translateX(-50%); width:0; height:0; border-left:8px solid transparent; border-right:8px solid transparent; border-top:10px solid ${color};"></div>
+                        </div>
+                    `;
+                    div.onclick = () => showInfo(this.data, this.pos);
+                    this.div = div;
+                    this.getPanes().overlayMouseTarget.appendChild(div);
+                }
+                draw() {
+                    const overlayProjection = this.getProjection();
+                    const point = overlayProjection.fromLatLngToDivPixel(this.pos);
+                    if (this.div) {
+                        this.div.style.left = (point.x - 30) + 'px';
+                        this.div.style.top = (point.y - 70) + 'px';
+                    }
+                }
+                onRemove() { if (this.div) this.div.parentNode.removeChild(this.div); }
+            };
+
+            initLIFF();
         }
-        
-        draw() {
-          const projection = this.getProjection();
-          const pos = projection.fromLatLngToDivPixel(this.position);
-          if (this.div) {
-            this.div.style.left = (pos.x - 45) + 'px';
-            this.div.style.top = (pos.y - 100) + 'px';
-          }
+
+        function showInfo(data, pos) {
+            const content = `
+                <div style="color:#333; padding:5px;">
+                    <strong style="font-size:16px;">${data.nickname}</strong><br>
+                    <span style="color:#DC143C; font-weight:bold;">📍 ${data.placeName}</span><br>
+                    ${data.caption ? `<small>"${data.caption}"</small><br>` : ''}
+                    <hr style="margin:5px 0">
+                    <a href="https://www.google.com/maps/dir/?api=1&destination=${data.lat},${data.lng}" target="_blank" style="display:block; background:#DC143C; color:#fff; text-align:center; padding:8px; border-radius:5px; text-decoration:none; margin-top:5px;">🚗 นำทางไปหา</a>
+                </div>
+            `;
+            const iw = new google.maps.InfoWindow({ content, position: pos });
+            iw.open(map);
         }
-        
-        onRemove() {
-          if (this.div) {
-            this.div.parentNode.removeChild(this.div);
-            this.div = null;
-          }
+
+        // 2. LIFF & Data
+        async function initLIFF() {
+            try {
+                await liff.init({ liffId: CONFIG.LIFF_ID });
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                    return;
+                }
+                userProfile = await liff.getProfile();
+                document.getElementById('profileBar').style.display = 'flex';
+                document.getElementById('profilePic').src = userProfile.pictureUrl;
+                document.getElementById('profileName').textContent = userProfile.displayName;
+                
+                await refreshMap();
+            } catch (err) {
+                console.error('LIFF Error', err);
+                showToast('LIFF Error: ' + err.message);
+            }
+            showLoading(false);
         }
-      };
-      
-      // Now init LIFF
-      initLIFF();
-    }
-    
-    // =====================================================
-    // LIFF INIT
-    // =====================================================
-    async function initLIFF() {
-      try {
-        await liff.init({ liffId: CONFIG.LIFF_ID });
-        
-        if (!liff.isLoggedIn()) {
-          liff.login();
-          return;
+
+        async function refreshMap() {
+            try {
+                const res = await fetch(CONFIG.GAS_URL + '?action=getCheckins');
+                const data = await res.json();
+                if (data.success) {
+                    renderMarkers(data.checkins);
+                    document.getElementById('activeCount').textContent = data.checkins.length + ' คน';
+                    
+                    const myPoint = data.checkins.find(c => c.userId === userProfile.userId);
+                    const statusEl = document.getElementById('profileStatus');
+                    const cancelBtn = document.getElementById('cancelBtn');
+                    
+                    if (myPoint) {
+                        statusEl.textContent = '✅ กำลังปักหมุดที่: ' + myPoint.placeName;
+                        statusEl.className = 'status active';
+                        cancelBtn.style.display = 'block';
+                    } else {
+                        statusEl.textContent = '⚪ ยังไม่ได้แชร์ตำแหน่ง';
+                        statusEl.className = 'status inactive';
+                        cancelBtn.style.display = 'none';
+                    }
+                }
+            } catch (err) {
+                showToast('โหลดข้อมูลไม่สำเร็จ');
+            }
         }
-        
-        userProfile = await liff.getProfile();
-        showProfile();
-        
-      } catch (e) {
-        console.error('LIFF Error:', e);
-      }
-      
-      await loadCheckins();
-      showLoading(false);
-    }
-    
-    // =====================================================
-    // PROFILE
-    // =====================================================
-    function showProfile() {
-      if (!userProfile) return;
-      
-      document.getElementById('profileBar').style.display = 'flex';
-      document.getElementById('profilePic').src = userProfile.pictureUrl || '';
-      document.getElementById('profileName').textContent = userProfile.displayName;
-      
-      updateMyStatus();
-    }
-    
-    function updateMyStatus() {
-      if (!userProfile) return;
-      
-      const statusEl = document.getElementById('profileStatus');
-      const cancelBtn = document.getElementById('cancelBtn');
-      const checkinBtn = document.getElementById('checkinBtn');
-      const myCheckinInfo = document.getElementById('myCheckinInfo');
-      
-      myCheckin = allCheckins.find(c => c.userId === userProfile.userId);
-      
-      if (myCheckin) {
-        statusEl.textContent = '📍 ' + myCheckin.placeName;
-        statusEl.className = 'status active';
-        cancelBtn.style.display = 'block';
-        checkinBtn.textContent = '📍 เปลี่ยนที่';
-        
-        myCheckinInfo.style.display = 'block';
-        document.getElementById('myCheckinPlace').textContent = '📍 ' + myCheckin.placeName;
-        document.getElementById('myCheckinTime').textContent = '⏰ หมดอายุใน ' + getTimeLeft(new Date(myCheckin.expireAt));
-      } else {
-        statusEl.textContent = '⚪ ยังไม่ได้แชร์โล';
-        statusEl.className = 'status inactive';
-        cancelBtn.style.display = 'none';
-        checkinBtn.textContent = '📍 แชร์โลของฉัน';
-        myCheckinInfo.style.display = 'none';
-      }
-    }
-    
-    // =====================================================
-    // LOAD & DISPLAY
-    // =====================================================
-    async function loadCheckins() {
-      try {
-        const res = await fetch(CONFIG.GAS_URL + '?action=getCheckins');
-        const data = await res.json();
-        
-        if (data.success) {
-          allCheckins = data.checkins;
-          displayCheckins(data.checkins);
-          document.getElementById('activeCount').textContent = data.checkins.length + ' คน';
-          updateMyStatus();
+
+        function renderMarkers(checkins) {
+            markers.forEach(m => m.setMap(null));
+            markers = [];
+            const bounds = new google.maps.LatLngBounds();
+
+            checkins.forEach(c => {
+                const pos = new google.maps.LatLng(c.lat, c.lng);
+                const isMe = c.userId === userProfile.userId;
+                const marker = new ProfileMarkerClass(pos, c, isMe);
+                marker.setMap(map);
+                markers.push(marker);
+                bounds.extend(pos);
+            });
+
+            if (checkins.length > 0) {
+                map.fitBounds(bounds);
+                if (checkins.length === 1) map.setZoom(15);
+            }
         }
-      } catch (e) {
-        console.error('Load error:', e);
-      }
-    }
-    
-    function displayCheckins(checkins) {
-      markers.forEach(m => m.setMap(null));
-      markers = [];
-      
-      if (checkins.length === 0 || !ProfileMarker) return;
-      
-      const bounds = new google.maps.LatLngBounds();
-      
-      checkins.forEach(c => {
-        const isMe = userProfile && c.userId === userProfile.userId;
-        const position = new google.maps.LatLng(c.lat, c.lng);
-        
-        if (isMe && userProfile && userProfile.pictureUrl) {
-          c.pictureUrl = userProfile.pictureUrl;
-        } else {
-          c.pictureUrl = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(c.nickname) + '&background=DC143C&color=fff&size=100';
+
+        // 3. Logic Functions
+        function openCheckinModal() {
+            document.getElementById('checkinModal').classList.add('active');
+            navigator.geolocation.getCurrentPosition(
+                p => {
+                    currentLat = p.coords.latitude;
+                    currentLng = p.coords.longitude;
+                    document.getElementById('gpsStatus').className = 'gps-status success';
+                    document.getElementById('gpsText').textContent = '✅ ล็อคพิกัด GPS สำเร็จ';
+                },
+                e => {
+                    document.getElementById('gpsStatus').className = 'gps-status error';
+                    document.getElementById('gpsText').textContent = '❌ โปรดอนุญาต GPS และเปิด Location';
+                },
+                { enableHighAccuracy: true }
+            );
         }
-        
-        const overlay = new ProfileMarker(position, c, isMe);
-        overlay.setMap(map);
-        markers.push(overlay);
-        
-        bounds.extend(position);
-      });
-      
-      map.fitBounds(bounds);
-      
-      if (checkins.length === 1) {
-        setTimeout(() => map.setZoom(15), 100);
-      }
-    }
-    
-    function getTimeLeft(exp) {
-      const diff = exp - new Date();
-      if (diff <= 0) return 'หมดอายุแล้ว';
-      const h = Math.floor(diff / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      return h > 0 ? h + ' ชม. ' + m + ' นาที' : m + ' นาที';
-    }
-    
-    // =====================================================
-    // CHECK-IN
-    // =====================================================
-    function openCheckinModal() {
-      document.getElementById('checkinModal').classList.add('active');
-      getCurrentLocation();
-    }
-    
-    function closeCheckinModal() {
-      document.getElementById('checkinModal').classList.remove('active');
-    }
-    
-    function getCurrentLocation() {
-      const s = document.getElementById('gpsStatus');
-      const t = document.getElementById('gpsText');
-      
-      s.className = 'gps-status loading';
-      t.textContent = 'กำลังหาตำแหน่ง...';
-      
-      if (!navigator.geolocation) {
-        s.className = 'gps-status error';
-        t.textContent = 'Browser ไม่รองรับ GPS';
-        return;
-      }
-      
-      navigator.geolocation.getCurrentPosition(
-        p => {
-          currentLat = p.coords.latitude;
-          currentLng = p.coords.longitude;
-          s.className = 'gps-status success';
-          t.textContent = '✅ พบตำแหน่งแล้ว';
-        },
-        e => {
-          s.className = 'gps-status error';
-          t.textContent = '❌ กรุณาเปิด GPS';
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    }
-    
-    function selectExpire(el) {
-      document.querySelectorAll('.expire-option').forEach(e => e.classList.remove('selected'));
-      el.classList.add('selected');
-      selectedExpireHours = parseInt(el.dataset.hours);
-    }
-    
-    async function submitCheckin(e) {
-      e.preventDefault();
-      
-      if (!userProfile) {
-        showToast('กรุณาเข้าสู่ระบบก่อน', 'error');
-        liff.login();
-        return;
-      }
-      
-      if (!currentLat) {
-        showToast('กรุณารอหาตำแหน่ง GPS', 'error');
-        return;
-      }
-      
-      const placeName = document.getElementById('placeName').value.trim();
-      if (!placeName) {
-        showToast('กรุณาใส่ชื่อสถานที่', 'error');
-        return;
-      }
-      
-      showLoading(true);
-      
-      try {
-        const res = await fetch(CONFIG.GAS_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            action: 'addCheckin',
-            userId: userProfile.userId,
-            nickname: userProfile.displayName,
-            unit: 'รุ่น 74',
-            lat: currentLat,
-            lng: currentLng,
-            placeName: placeName,
-            caption: document.getElementById('caption').value.trim(),
-            expireHours: selectedExpireHours
-          })
-        });
-        
-        const data = await res.json();
-        
-        if (data.success) {
-          showToast('✅ แชร์โลสำเร็จ!', 'success');
-          closeCheckinModal();
-          document.getElementById('placeName').value = '';
-          document.getElementById('caption').value = '';
-          await loadCheckins();
-          map.setCenter({ lat: currentLat, lng: currentLng });
-          map.setZoom(15);
-        } else {
-          showToast('❌ ' + (data.error || 'เกิดข้อผิดพลาด'), 'error');
+
+        function closeCheckinModal() { document.getElementById('checkinModal').classList.remove('active'); }
+
+        function selectExpire(el) {
+            document.querySelectorAll('.expire-option').forEach(opt => opt.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedExpireHours = parseInt(el.dataset.hours);
         }
-      } catch (err) {
-        showToast('❌ ' + err.message, 'error');
-      }
-      
-      showLoading(false);
-    }
-    
-    // =====================================================
-    // CANCEL
-    // =====================================================
-    async function cancelCheckin() {
-      if (!userProfile) return;
-      if (!confirm('ยืนยันยกเลิกหมุด?')) return;
-      
-      showLoading(true);
-      
-      try {
-        const res = await fetch(CONFIG.GAS_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            action: 'deleteCheckin',
-            userId: userProfile.userId
-          })
-        });
-        
-        const data = await res.json();
-        
-        if (data.success) {
-          showToast('✅ ยกเลิกหมุดแล้ว', 'success');
-          closeCheckinModal();
-          await loadCheckins();
-        } else {
-          showToast('❌ ' + (data.error || 'เกิดข้อผิดพลาด'), 'error');
+
+        async function submitCheckin(e) {
+            e.preventDefault();
+            if (!currentLat) return showToast('กรุณารอ GPS สักครู่');
+            
+            showLoading(true);
+            try {
+                const res = await fetch(CONFIG.GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        action: 'addCheckin',
+                        userId: userProfile.userId,
+                        nickname: userProfile.displayName,
+                        pictureUrl: userProfile.pictureUrl,
+                        lat: currentLat,
+                        lng: currentLng,
+                        placeName: document.getElementById('placeName').value,
+                        caption: document.getElementById('caption').value,
+                        expireHours: selectedExpireHours
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('แชร์พิกัดสำเร็จ!');
+                    closeCheckinModal();
+                    await refreshMap();
+                }
+            } catch (err) { showToast('เกิดข้อผิดพลาดในการส่งข้อมูล'); }
+            showLoading(false);
         }
-      } catch (err) {
-        showToast('❌ ' + err.message, 'error');
-      }
-      
-      showLoading(false);
-    }
-    
-    // =====================================================
-    // UTILITIES
-    // =====================================================
-    function refreshMap() {
-      showLoading(true);
-      loadCheckins().then(() => {
-        showLoading(false);
-        showToast('🔄 รีเฟรชแล้ว', 'success');
-      });
-    }
-    
-    function showLoading(s) {
-      document.getElementById('loadingOverlay').classList.toggle('active', s);
-    }
-    
-    function showToast(msg, type = '') {
-      const t = document.getElementById('toast');
-      t.textContent = msg;
-      t.className = 'toast show ' + type;
-      setTimeout(() => t.classList.remove('show'), 3000);
-    }
-  </script>
-  
-  <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDTS-AxrXpfxj7-14GjX0Asi3QhdYxg7ao&callback=initMap"></script>
+
+        async function cancelCheckin() {
+            if (!confirm('ต้องการลบหมุดของคุณใช่หรือไม่?')) return;
+            showLoading(true);
+            try {
+                await fetch(CONFIG.GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ action: 'deleteCheckin', userId: userProfile.userId })
+                });
+                await refreshMap();
+                showToast('ลบหมุดแล้ว');
+            } catch (err) { showToast('ยกเลิกไม่สำเร็จ'); }
+            showLoading(false);
+        }
+
+        function showLoading(s) { document.getElementById('loadingOverlay').classList.toggle('active', s); }
+        function showToast(m) {
+            const t = document.getElementById('toast');
+            t.textContent = m;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+    </script>
+
+    <!-- แก้ไข URL ตรงนี้: เพิ่ม loading=async และย้าย callback ไปไว้หลังสุด -->
+    <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDTS-AxrXpfxj7-14GjX0Asi3QhdYxg7ao&loading=async&callback=initMap"></script>
 </body>
 </html>
